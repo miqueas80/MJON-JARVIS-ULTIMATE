@@ -1,5 +1,7 @@
 # Experimental ISO builder. Runs only when this workflow changes or is explicitly dispatched.
 # It never installs the OS on a real computer, and never publishes a release.
+# Build attempt 1 proved a binary-only pip restriction rejected Vosk/srt;
+# this build uses the reviewed native hook with desktop extras and source fallback.
 name: MJON AI OS - experimental USB ISO
 
 on:
@@ -8,6 +10,11 @@ on:
     paths:
       - '.github/workflows/mjon-live-iso.yml'
   workflow_dispatch:
+
+# Keep a single high-resource image build per development branch.
+concurrency:
+  group: mjon-live-iso-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

@@ -1,0 +1,60 @@
+# MJON AI OS — Unified Native Distribution (Development)
+
+**One product, one codebase.** This repository contains the operating-system image definition and the Dodaios-derived intelligence engine. There is no separate Jarvis app repository and no second runtime.
+
+## Architecture
+
+- **Base OS:** Debian 13 (trixie), amd64, KDE Plasma via `live-task-kde`.
+- **Built-in agent:** the **fork's own** `dodaios` wheel, including `mjon_jarvis` and `mjon_os`.
+- **Desktop start:** `/etc/xdg/autostart/mjon-ai-os.desktop` starts the `mjon-jarvis.service` **user** service.
+- **Launch:** `/usr/local/bin/mjon-session` runs `mjon_os.first_boot` and the existing `dodaios.ui.web.launcher`.
+- **Private state:** `$XDG_CONFIG_HOME/mjon-ai-os/dodaios.toml` and `$XDG_DATA_HOME/mjon-ai-os` (defaults under `~/.config` and `~/.local/share`).
+- **Defaults:** Jarvis wake phrase, Spanish language preference, upstream self-autostart disabled to avoid duplicate instances.
+- **Permissions:** logged-in user, no root for AI, `NoNewPrivileges=yes`, upstream approvals retained.
+
+### Why we do not fork the Linux kernel
+
+A Linux distribution is a complete OS; native session services and desktop protocols provide OS integration without replacing a proven kernel. The agent is preinstalled in the ISO and starts as part of the OS experience.
+
+## Validated locally
+
+```shell
+python3 -m unittest discover -s mjon_os/tests -p 'test_*.py' -v
+```
+
+The preparer is side-effect-free for host system settings. It writes only a **new** build workspace; it never overwrites a preexisting directory. It checks the wheel's metadata and that the engine includes MJON's integration modules. A hash in `mjon-build.json` records the wheel used.
+
+## Build preparation (developer/Linux host only)
+
+1. Review the upstream source and the fork's changes; keep `LICENSE` and `NOTICE`.
+2. Build the repository's actual Python wheel using its existing `pyproject.toml`/setuptools setup, after building the upstream frontend if required:
+   ```shell
+   python3 -m pip install --upgrade 'setuptools>=84.1.0' wheel build
+   python3 -m build --wheel --no-isolation -o /tmp/mjon-wheels
+   ```
+3. Prepare the Debian live-build workspace from **that** wheel:
+   ```shell
+   python3 -m mjon_os.image_builder --wheel /tmp/mjon-wheels/dodaios-4.1.2-py3-none-any.whl --workdir /tmp/mjon-live
+   ```
+4. On a controlled Debian 13 build host with `live-build` installed, explicitly run:
+   ```shell
+   cd /tmp/mjon-live
+   sudo lb config
+   sudo lb build
+   ```
+
+The final commands can download many packages and consume substantial CPU, RAM, disk and network. They are **not** executed on the user's Windows machine. The preparer does not create an ISO by itself.
+
+## Release blockers — NOT a finished OS
+
+- Build an actual `.iso` artifact successfully and validate boot on UEFI and BIOS VMs.
+- Validate KDE login, agent service startup, and first-run configuration in the live image.
+- Verify the upstream frontend assets are bundled in the wheel and the desktop UI is usable.
+- Test STT, TTS, wake word and GUI automation under KDE Wayland; assess permissions and portal behavior.
+- Verify offline command execution and disclose that local LLM model weights are not yet bundled.
+- Measure idle/peak RAM on 8 GB hardware, including recovery from model and network failures.
+- Exercise destructive-action approvals and ensure cancellation, logs, uninstall and recovery.
+- Verify packaging provenance and upstream notices; code derived from Dodaios remains attributed.
+- Produce a signed or checksummed release ISO and clear rollback/testing instructions.
+
+**Status:** native OS build foundation, not installable product release.

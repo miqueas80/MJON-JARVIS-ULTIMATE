@@ -75,7 +75,7 @@
 - [x] Step 2: Observe the failing import test (RED).
 - [x] Step 3: Add prepare-only CLI, Debian 13 KDE package list and an image-time pip hook.
 - [x] Step 4: Run Python unit tests and POSIX shell syntax checks locally.
-- [ ] Step 5: Build an actual Debian ISO in a disposable Linux builder.
+- [x] Step 5: Build an actual Debian ISO in a disposable Linux builder (experimental run 41704101235: passed, artifact 13264574252; source 9229bf249; not VM-certified).
 - [ ] Step 6: Boot the ISO under QEMU with UEFI and BIOS and capture health evidence.
 
 ### Task 4: Cross-platform checks and release gating

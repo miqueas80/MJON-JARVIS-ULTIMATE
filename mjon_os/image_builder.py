@@ -34,7 +34,7 @@ lb config noauto \
   --debian-installer none \
   --archive-areas "main contrib non-free-firmware" \
   --apt-recommends false \
-  --bootappend-live "boot=live components locales=es_AR.UTF-8 keyboard-layouts=latam" \
+  --bootappend-live "boot=live components locales=es_AR.UTF-8 keyboard-layouts=latam console=tty0 console=ttyS0,115200n8 systemd.show_status=1" \
   "${@}"
 '''
 

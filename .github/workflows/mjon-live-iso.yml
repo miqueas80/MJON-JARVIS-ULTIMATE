@@ -125,6 +125,10 @@ jobs:
           python -m mjon_os.qemu_boot --iso "$iso" \
             --uefi-firmware /usr/share/OVMF/OVMF_CODE_4M.fd --timeout 300 \
             --log "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
+          # A valid kernel alone is not a working desktop. Require the
+          # graphical display manager to report active from INSIDE each VM.
+          grep -Fq 'MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
+          grep -Fq 'MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
       - name: Upload experimental ISO for virtual-machine testing (not release)
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

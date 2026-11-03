@@ -4,6 +4,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from mjon_os.qemu_boot import analyze_serial_log, qemu_command
 
@@ -46,9 +47,25 @@ class BootProbeTests(unittest.TestCase):
             iso.write_bytes(b"stub")
             firmware = Path(temporary) / "OVMF_CODE.fd"
             firmware.write_bytes(b"stub")
-            cmd = qemu_command(iso, firmware=firmware)
-            self.assertIn("-bios", cmd)
-            self.assertEqual(cmd[cmd.index("-bios") + 1], str(firmware.resolve()))
+            variables = Path(temporary) / "OVMF_VARS.fd"
+            variables.write_bytes(b"stub")
+            cmd = qemu_command(iso, firmware=firmware, firmware_vars=variables)
+            self.assertNotIn("-bios", cmd)
+            drives = [cmd[i+1] for i, item in enumerate(cmd) if item == "-drive"]
+            self.assertEqual(len(drives), 2)
+            self.assertIn("if=pflash", drives[0])
+            self.assertIn("readonly=on", drives[0])
+            self.assertIn(str(firmware.resolve()), drives[0])
+            self.assertIn(str(variables.resolve()), drives[1])
+
+    @patch("mjon_os.qemu_boot.time.sleep")
+    @patch("mjon_os.qemu_boot.socket.socket")
+    def test_start_key_is_sent_only_to_vm_monitor(self, make_socket, sleep):
+        from mjon_os.qemu_boot import _send_boot_key
+        _send_boot_key(Path("/tmp/mjon-monitor.sock"), delay_seconds=0)
+        instance = make_socket.return_value.__enter__.return_value
+        instance.connect.assert_called_once_with("/tmp/mjon-monitor.sock")
+        instance.sendall.assert_called_once_with(b"sendkey ret\n")
 
     def test_unavailable_image_refuses_to_spawn(self):
         with self.assertRaises(FileNotFoundError):

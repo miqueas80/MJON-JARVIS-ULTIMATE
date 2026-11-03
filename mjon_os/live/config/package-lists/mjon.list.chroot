@@ -5,6 +5,13 @@ sddm
 sddm-theme-debian-breeze
 xserver-xorg
 libpam-systemd
+# Debian Live needs user-setup and sudo explicitly when APT recommends are disabled.
+# Without user-setup, agetty/SDDM try to authenticate 'user' before it exists.
+live-boot
+live-config
+live-config-systemd
+user-setup
+sudo
 # Harmless desktop apps guaranteed for Spanish Jarvis smoke tests.
 kate
 kcalc

@@ -81,6 +81,7 @@ class LiveImageTests(unittest.TestCase):
         self.assertTrue((work / 'config/includes.chroot/opt/mjon-ai-os/wheels' / self.wheel.name).is_file())
         self.assertTrue((work / 'config/includes.chroot/etc/xdg/autostart/mjon-ai-os.desktop').is_file())
         self.assertTrue((work / 'config/includes.chroot/usr/lib/systemd/user/mjon-jarvis.service').is_file())
+        self.assertTrue((work / 'config/includes.chroot/usr/local/bin/mjon-doctor').is_file())
         self.assertEqual(json.loads((work / 'config/includes.chroot/usr/share/mjon-ai-os/build-manifest.json').read_text()), metadata)
         saved = json.loads((work / 'mjon-build.json').read_text())
         self.assertEqual(saved, metadata)

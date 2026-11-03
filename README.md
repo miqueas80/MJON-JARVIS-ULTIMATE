@@ -1,3 +1,19 @@
+# MJON AI OS — Unified Intelligent Operating System (development)
+
+**MJON AI OS is one Debian 13 + KDE Plasma distribution with its intelligence engine built into the system image.** This is a single-repository project, not a standalone Jarvis download plus a separate OS.
+
+- [Native OS build foundation](mjon_os/README.md)
+- [Unified architecture](docs/specs/2026-11-03-mjon-ai-os-unified-design.md)
+- [Engineering and release gates](docs/plans/2026-11-03-mjon-ai-os-native-foundation.md)
+
+**Status: experimental source only.** No verified bootable ISO has been released. Do not overwrite or replace an existing operating system with these development assets. We will not ask for installation until boot, voice, action permissions, performance and recovery have been tested.
+
+This project is **based on the open-source Dodaios software** (Apache-2.0). We retain its licensing and acknowledgments; MJON AI OS is an independent fork and is **not affiliated with or endorsed by** the Dodaios project. The original project README follows for upstream feature reference; references to official Dodaios installers and releases there do **not** install MJON AI OS.
+
+---
+
+## Upstream Dodaios README (reference)
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Dodaios/Dodaios/main/assets/brand/dodaios-logo-on-dark.svg" />

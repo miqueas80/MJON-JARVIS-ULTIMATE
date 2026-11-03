@@ -4,6 +4,10 @@ from __future__ import annotations
 import tempfile
 import unittest
 import socket
+import os
+import subprocess
+import sys
+import time
 from pathlib import Path
 from unittest.mock import patch
 
@@ -69,6 +73,24 @@ class BootProbeTests(unittest.TestCase):
         instance.connect.assert_called_once_with("/tmp/mjon-monitor.sock")
         self.assertEqual(instance.sendall.call_count, 3)
         instance.sendall.assert_any_call(b"sendkey ret\n")
+
+    @unittest.skipUnless(os.name == "posix", "selector of subprocess pipes is POSIX-only")
+    def test_vm_serial_monitor_stops_when_graphical_marker_arrives(self):
+        from mjon_os.qemu_boot import _collect_until_graphical_ready
+        child = subprocess.Popen(
+            [sys.executable, "-c",
+             "import time; print('MJON_VM_PROOF KERNEL_RUNNING', flush=True); "
+             "print('MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE', flush=True); time.sleep(30)"],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+        try:
+            start = time.monotonic()
+            output = _collect_until_graphical_ready(child, 5)
+            self.assertIn("MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE", output)
+            self.assertLess(time.monotonic() - start, 3.0)
+        finally:
+            child.kill()
+            child.communicate(timeout=5)
 
     def test_unavailable_image_refuses_to_spawn(self):
         with self.assertRaises(FileNotFoundError):

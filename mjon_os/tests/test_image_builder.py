@@ -56,7 +56,7 @@ class LiveImageTests(unittest.TestCase):
             self.assertIn(package, packages.splitlines())
         hook = (root / 'hooks/live/90-mjon-agent.hook.chroot').read_text(encoding='utf-8')
         self.assertIn('--system-site-packages', hook)
-        self.assertIn('"[desktop]"', hook.replace('$1[desktop]', '"[desktop]"'))
+        self.assertIn('"$1[desktop]"', hook)
         self.assertIn('import webview', hook)
 
     def test_rejects_wheel_without_built_frontend(self) -> None:

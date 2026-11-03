@@ -41,6 +41,9 @@ def check_candidate(iso: Path, checksum: Path, boot_records: Path,
         log = logpath.read_text(encoding="utf-8")
         if "MJON_VM_EVIDENCE kernel=True userspace=True" not in log:
             raise ValueError(f"Missing {label} VM kernel/userspace proof")
+        if ("MJON_VM_EVIDENCE kernel=True userspace=True live_user=True" not in log
+                or "MJON_VM_PROOF LIVE_USER_READY" not in log):
+            raise ValueError(f"Missing {label} VM Live user account and password proof")
     return True
 
 

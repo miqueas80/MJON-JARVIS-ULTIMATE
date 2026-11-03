@@ -1,0 +1,36 @@
+# Lightweight fork-specific integration check; no external models or credentials.
+name: MJON JARVIS smoke
+
+on:
+  push:
+    branches:
+      - feature/mjon-foundation
+    paths:
+      - 'mjon_jarvis/**'
+      - 'dodaios/brain/local_action_gate.py'
+      - '.github/workflows/mjon-jarvis-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  spanish-windows-routing:
+    name: Spanish voice routing - ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          lfs: false
+      - name: Python 3.11
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.11'
+      - name: Run isolated integration checks
+        run: python -m unittest discover -s mjon_jarvis/smoke -p "test_*.py" -v

@@ -15,5 +15,8 @@ fi
 /opt/mjon-ai-os/venv/bin/python -m pip install --no-cache-dir --prefer-binary "$1[desktop]"
 /opt/mjon-ai-os/venv/bin/python -c 'import dodaios, mjon_jarvis, mjon_os, webview'
 /opt/mjon-ai-os/venv/bin/python -c 'import gi; gi.require_version("Gtk", "3.0"); gi.require_version("WebKit2", "4.1"); from gi.repository import Gtk, WebKit2'
+# The whole OS ships a single native agent: verify the real action router.
+MJON_NATIVE_OS=1 /opt/mjon-ai-os/venv/bin/python -c 'from dodaios.brain.local_action_gate import match_local_action; p = match_local_action("Jarvis, abrí calculadora", lang="es"); assert p and p.tool_calls[0].name == "open_app" and p.tool_calls[0].args == {"app_name": "kcalc"}'
+
 # Avoid distributing an extra redundant installer payload inside the Live filesystem.
 rm -rf /opt/mjon-ai-os/wheels

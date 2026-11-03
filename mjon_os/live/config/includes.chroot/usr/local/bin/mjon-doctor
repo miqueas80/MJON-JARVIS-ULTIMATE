@@ -1,0 +1,3 @@
+#!/bin/sh
+# Inspect live-session health without making system changes.
+exec /opt/mjon-ai-os/venv/bin/python -m mjon_os.doctor "$@"

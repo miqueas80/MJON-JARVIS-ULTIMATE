@@ -35,7 +35,7 @@
 - [x] Step 2: Verify missing helper triggers test import failure (RED).
 - [x] Step 3: Add both MJON packages to the upstream wheel list and adapt the upstream config-root selector.
 - [x] Step 4: Run focused config tests in local Python.
-- [ ] Step 5: Confirm the generated wheel contains all native modules using CI.
+- [x] Step 5: Confirm the generated wheel contains all native modules using CI (GitHub Actions run 41700515794).
 - [ ] Step 6: Verify packaging with the full upstream regression suite before merge.
 
 ### Task 2: One safe first-boot agent instance
@@ -91,7 +91,7 @@
 
 - [x] Step 1: Run unit tests on Windows and Linux with Python 3.13.
 - [x] Step 2: Add GitHub CI workflow with a wheel contract check.
-- [ ] Step 3: Observe successful Windows/Linux CI and fix any failures.
+- [x] Step 3: Observe successful Windows/Linux CI and fix any failures (12 tests on each platform, followed by wheel/image-preparation contract).
 - [ ] Step 4: Verify full upstream suite and bundle the desktop frontend.
 - [ ] Step 5: Test voice, on-screen control, model fallback and 8 GB RAM on real Linux.
 - [ ] Step 6: Release only when the complete ISO boot and safety criteria pass.

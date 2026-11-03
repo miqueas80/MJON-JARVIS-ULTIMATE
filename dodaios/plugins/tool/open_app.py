@@ -98,7 +98,7 @@ _KNOWN_APPS_DARWIN: frozenset[str] = frozenset({
 
 _KNOWN_APPS_LINUX: frozenset[str] = frozenset({
     # System
-    "nautilus", "files", "gnome-terminal", "konsole", "xterm", "terminal",
+    "nautilus", "files", "dolphin", "gnome-terminal", "konsole", "xterm", "terminal",
     "gnome-calculator", "kcalc", "calc", "calculator", "gedit", "kate",
     "gnome-control-center", "settings", "gnome-system-monitor",
     # Browser

@@ -5,6 +5,8 @@ kate
 kcalc
 dolphin
 konsole
+# Usable web browser even when apt recommends are disabled.
+firefox-esr
 locales
 network-manager
 # Portable laptop Wi-Fi and audio firmware (may contain redistributable binary firmware).

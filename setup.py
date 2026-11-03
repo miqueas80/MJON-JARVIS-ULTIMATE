@@ -26,7 +26,7 @@ LEGACY_PACKAGE_DIR = "dodaios/_legacy_alias"
 #: and the desktop overlay import it as ``ui.orb…``. Without it in the list,
 #: an installed console script raises ``ModuleNotFoundError: No module named
 #: 'ui'`` while the same command works from a checkout (issue #457).
-INCLUDE = ("dodaios*", "conductor*", "ui*")
+INCLUDE = ("dodaios*", "conductor*", "ui*", "mjon_jarvis*", "mjon_os*")
 EXCLUDE = ("*.__pycache__", "*.__pycache__.*", "dodaios._legacy_alias")
 
 

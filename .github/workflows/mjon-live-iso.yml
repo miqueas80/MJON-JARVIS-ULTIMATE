@@ -152,3 +152,58 @@ jobs:
             ${{ runner.temp }}/mjon-live/boot-uefi-serial.txt
           if-no-files-found: ignore
           retention-days: 7
+
+  publish-usb-prerelease:
+    name: Publish SHA256-verified Live USB candidate
+    needs: live-iso
+    if: ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'release(os):') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Checkout exact source commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Install Python 3.13
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Download the fully verified ISO from the preceding job
+        uses: actions/download-artifact@v4
+        with:
+          name: mjon-ai-os-developer-iso-${{ github.sha }}
+          path: ${{ runner.temp }}/verified-iso
+      - name: Verify checksum, boot sectors and actual virtual boots
+        run: |
+          python -m unittest discover -s mjon_os/tests -p 'test_release_checks.py' -v
+          iso="$RUNNER_TEMP/verified-iso/MJON-AI-OS-dev-amd64.iso"
+          python -m mjon_os.release_checks \
+            --iso "$iso" \
+            --checksum "$iso.sha256" \
+            --boot-records "$RUNNER_TEMP/verified-iso/boot-records.txt" \
+            --bios-log "$RUNNER_TEMP/verified-iso/boot-bios-serial.txt" \
+            --uefi-log "$RUNNER_TEMP/verified-iso/boot-uefi-serial.txt"
+      - name: Publish experimental USB pre-release (not a Windows installer)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/verified-iso"
+          tag="mjon-ai-os-usb-dev-${GITHUB_SHA:0:12}"
+          gh release create "$tag" \
+            MJON-AI-OS-dev-amd64.iso \
+            MJON-AI-OS-dev-amd64.iso.sha256 \
+            mjon-build.json \
+            boot-records.txt \
+            boot-bios-serial.txt \
+            boot-uefi-serial.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "MJON AI OS - USB Live experimental (source ${GITHUB_SHA:0:12})" \
+            --notes-file "$GITHUB_WORKSPACE/mjon_os/USB_RELEASE_NOTES.md" \
+            --prerelease
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json url --jq '.url'
+

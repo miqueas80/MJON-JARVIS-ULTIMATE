@@ -57,7 +57,7 @@ class LiveImageTests(unittest.TestCase):
         hook = (root / 'hooks/live/90-mjon-agent.hook.chroot').read_text(encoding='utf-8')
         self.assertIn('--system-site-packages', hook)
         self.assertIn('"$1[desktop]"', hook)
-        self.assertIn('import webview', hook)
+        self.assertIn('mjon_os, webview', hook)
 
     def test_rejects_wheel_without_built_frontend(self) -> None:
         path = self.base / 'missing-ui.whl'

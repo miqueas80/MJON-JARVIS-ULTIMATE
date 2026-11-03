@@ -631,6 +631,12 @@ def is_open_app_intent(text: str) -> bool:
     t = _normalize(text)
     if not t:
         return False
+    # MJON: Spanish open-app speech stays on the desktop route, including
+    # unknown apps for which the LLM/Computer-Use path must decide.
+    from mjon_jarvis.spanish_bridge import is_spanish_open_intent
+
+    if is_spanish_open_intent(text):
+        return True
     if _OPEN_INSTRUCTIONAL_RE.search(t):
         return False
     if _NOT_OPEN_APP_RE.search(t):
@@ -1012,6 +1018,24 @@ def match_local_action(
     scripted = _match_scripted_local_plan(normalized)
     if scripted is not None:
         return scripted
+
+    # MJON: route Spanish commands through the SAME built-in action tools.
+    # This parser produces plans only; the existing tool executor retains its
+    # risk-tier approvals, logs, platform handling, and cancellation behavior.
+    from mjon_jarvis.spanish_bridge import parse_spanish_request
+
+    spanish = parse_spanish_request(original)
+    if spanish is not None:
+        if spanish.kind == "launch":
+            return LocalActionPlan(
+                mode=LocalActionMode.DIRECT,
+                tool_calls=(LocalToolCall(name="open_app", args={"app_name": spanish.app}),),
+            )
+        return LocalActionPlan(
+            mode=LocalActionMode.COMPUTER_USE,
+            harness=HARNESS_NAME,
+            prompt=original,
+        )
 
     direct = _match_direct_open_app(normalized)
     if direct is not None:

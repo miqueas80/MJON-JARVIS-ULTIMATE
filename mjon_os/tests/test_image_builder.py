@@ -38,6 +38,7 @@ class LiveImageTests(unittest.TestCase):
             archive.writestr('dodaios-4.1.2.dist-info/METADATA', 'Metadata-Version: 2.3\nName: dodaios\nVersion: 4.1.2\n')
             archive.writestr('mjon_jarvis/spanish_bridge.py', '# MJON')
             archive.writestr('mjon_os/config_paths.py', '# MJON')
+            archive.writestr('dodaios/ui/web/dist/index.html', '<!doctype html><title>MJON</title>')
 
     def test_wheel_metadata_must_name_dodaios(self) -> None:
         self.assertEqual(validate_wheel(self.wheel), '4.1.2')
@@ -46,6 +47,15 @@ class LiveImageTests(unittest.TestCase):
             archive.writestr('fake-0.1.dist-info/METADATA', 'Name: fake\nVersion: 0.1\n')
         with self.assertRaises(ValueError):
             validate_wheel(wrong)
+
+    def test_rejects_wheel_without_built_frontend(self) -> None:
+        path = self.base / 'missing-ui.whl'
+        with ZipFile(path, 'w') as archive:
+            archive.writestr('dodaios-4.1.2.dist-info/METADATA', 'Name: dodaios\nVersion: 4.1.2\n')
+            archive.writestr('mjon_jarvis/spanish_bridge.py', '# MJON')
+            archive.writestr('mjon_os/config_paths.py', '# MJON')
+        with self.assertRaisesRegex(ValueError, 'frontend'):
+            validate_wheel(path)
 
     def test_preparation_copies_wheel_and_live_configuration(self) -> None:
         work = self.base / 'work'

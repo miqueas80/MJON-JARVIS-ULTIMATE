@@ -23,5 +23,20 @@ class VMCaptureCommandTests(unittest.TestCase):
             self.assertEqual(args[args.index("-display")+1], "none")
 
 
+    def test_uefi_boot_keeps_firmware_variables_disposable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            iso, code, vars_path = (base/"test.iso", base/"OVMF_CODE_4M.fd", base/"OVMF_VARS_4M.fd")
+            for path in (iso, code, vars_path):
+                path.write_bytes(b"stub")
+            cmd = screenshot_command(iso, firmware=code, firmware_vars=vars_path, monitor=base/"mjon.sock")
+            drives = [cmd[i+1] for i, x in enumerate(cmd) if x == "-drive"]
+            self.assertEqual(len(drives), 2)
+            self.assertIn("if=pflash", drives[0])
+            self.assertIn("readonly=on", drives[0])
+            self.assertIn(str(vars_path.resolve()), drives[1])
+            self.assertEqual(cmd[cmd.index("-nic")+1], "none")
+
+
 if __name__=="__main__":
     unittest.main()

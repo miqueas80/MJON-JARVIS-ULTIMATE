@@ -1,0 +1,15 @@
+# Debian 13 KDE desktop, native session integration, locale and I/O dependencies.
+live-task-kde
+locales
+network-manager
+dbus-user-session
+xdg-desktop-portal
+xdg-desktop-portal-kde
+python3
+python3-venv
+python3-pip
+ca-certificates
+libportaudio2
+libasound2t64
+ffmpeg
+fonts-noto-core

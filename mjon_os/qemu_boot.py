@@ -1,12 +1,21 @@
-"""Virtual boot validation for an experimental ISO, without host disk access."""
+"""Virtual boot validation for an experimental ISO without exposing host drives.
+
+A Debian Live ISO can wait indefinitely at the graphical boot menu; QEMU
+must explicitly press Enter before a serial-kernel/userspace test is valid.
+UEFI requires OVMF CODE and a disposable copy of its matching VARS image.
+"""
 from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
 from pathlib import Path
 import re
+import shutil
+import socket
 import subprocess
 import sys
+import tempfile
+import time
 
 
 @dataclass(frozen=True)
@@ -16,21 +25,23 @@ class BootEvidence:
     excerpt: str
 
 
-_KERNEL_RE = re.compile(r"(?:Linux version \d|Linux version|Linux kernel)")
-_USERSPACE_RE = re.compile(r"(?:systemd\[1\]|Welcome to Debian|Reached target|Starting Network Manager)")
+_KERNEL_RE = re.compile(r"(?:Linux version \d|Linux kernel|MJON_VM_PROOF KERNEL_RUNNING)")
+_USERSPACE_RE = re.compile(r"(?:systemd\[1\]|Welcome to Debian|Reached target|Starting Network Manager|MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE)")
 
 
 def analyze_serial_log(log: str) -> BootEvidence:
-    """An El Torito entry alone is not proof of a successful kernel boot."""
-    excerpt = "\n".join(log.splitlines()[-60:])
+    """Boot menus and ISO signatures are never sufficient proof of kernel boot."""
+    lines = log.splitlines()
+    excerpt = "\n".join([*lines[:20], "...", *lines[-70:]])
     return BootEvidence(bool(_KERNEL_RE.search(log)), bool(_USERSPACE_RE.search(log)), excerpt)
 
 
-def qemu_command(iso: Path, *, firmware: Path | None, memory_mib: int = 3072) -> list[str]:
+def qemu_command(
+    iso: Path, *, firmware: Path | None, firmware_vars: Path | None = None,
+    memory_mib: int = 3072,
+) -> list[str]:
     if not iso.is_file():
         raise FileNotFoundError(iso)
-    if firmware is not None and not firmware.is_file():
-        raise FileNotFoundError(firmware)
     if memory_mib < 1024:
         raise ValueError("Boot test needs at least 1 GiB")
     args = [
@@ -41,37 +52,78 @@ def qemu_command(iso: Path, *, firmware: Path | None, memory_mib: int = 3072) ->
         "-nic", "none", "-no-reboot", "-snapshot",
     ]
     if firmware is not None:
-        args.extend(["-bios", str(firmware.resolve())])
+        if not firmware.is_file():
+            raise FileNotFoundError(firmware)
+        if firmware_vars is None or not firmware_vars.is_file():
+            raise ValueError("UEFI requires an existing disposable OVMF VARS file")
+        args.extend([
+            "-drive", f"if=pflash,format=raw,unit=0,readonly=on,file={firmware.resolve()}",
+            "-drive", f"if=pflash,format=raw,unit=1,file={firmware_vars.resolve()}",
+        ])
+    elif firmware_vars is not None:
+        raise ValueError("VARS is only valid for UEFI")
     return args
 
 
-def boot_probe(iso: Path, *, firmware: Path | None, timeout_seconds: int = 360) -> BootEvidence:
-    """Launch an isolated VM without any writable host disk or network device.
+def _send_boot_key(monitor: Path, *, delay_seconds: float = 5.0) -> None:
+    """Send Enter only to the isolated virtual firmware/boot menu."""
+    time.sleep(delay_seconds)
+    last_error: OSError | None = None
+    for _ in range(20):
+        try:
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+                sock.settimeout(5)
+                sock.connect(str(monitor))
+                sock.sendall(b"sendkey ret\n")
+                return
+        except OSError as exc:
+            last_error = exc
+            time.sleep(0.5)
+    raise RuntimeError(f"QEMU monitor not ready: {last_error}")
 
-    QEMU is expected to remain running after the desktop boots. Timeout is not
-    considered an error if serial logs prove kernel AND userspace startup.
+
+def boot_probe(iso: Path, *, firmware: Path | None, timeout_seconds: int = 300) -> BootEvidence:
+    """Boot ISO in a disposable network-free, host-disk-free VM.
+
+    QEMU remains running after Linux starts. We terminate it at the bound and
+    consider success only when its serial output proves kernel + userspace.
     """
-    args = qemu_command(iso, firmware=firmware)
-    try:
-        proc = subprocess.run(
-            args, capture_output=True, text=True, encoding="utf-8", errors="replace",
-            timeout=timeout_seconds, check=False,
+    with tempfile.TemporaryDirectory(prefix="mjon-boot-") as dirname:
+        directory = Path(dirname)
+        vars_copy: Path | None = None
+        if firmware is not None:
+            template = firmware.with_name(firmware.name.replace("CODE", "VARS"))
+            if not template.is_file():
+                raise FileNotFoundError(f"Missing matching OVMF VARS template: {template}")
+            vars_copy = directory / "OVMF_VARS.fd"
+            shutil.copyfile(template, vars_copy)
+        monitor = directory / "monitor.sock"
+        args = qemu_command(iso, firmware=firmware, firmware_vars=vars_copy)
+        args[args.index("-monitor") + 1] = f"unix:{monitor},server,nowait"
+        process = subprocess.Popen(
+            args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=False,
         )
-        output = proc.stdout + "\n" + proc.stderr
-    except subprocess.TimeoutExpired as exc:
-        # subprocess.run terminates the child process when the timeout expires.
-        raw = exc.stdout or b""
-        err = exc.stderr or b""
-        output = (raw.decode("utf-8", "replace") if isinstance(raw, bytes) else raw) + "\n" + (
-            err.decode("utf-8", "replace") if isinstance(err, bytes) else err)
-    return analyze_serial_log(output)
+        try:
+            _send_boot_key(monitor)
+            try:
+                stdout, stderr = process.communicate(timeout=timeout_seconds)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                stdout, stderr = process.communicate(timeout=20)
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.communicate(timeout=20)
+        output = stdout.decode("utf-8", "replace") + "\n" + stderr.decode("utf-8", "replace")
+        return analyze_serial_log(output)
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Check a Live ISO using QEMU without touching host disks")
+    parser = argparse.ArgumentParser(description="Verify Linux kernel/userspace boot using QEMU")
     parser.add_argument("--iso", type=Path, required=True)
-    parser.add_argument("--uefi-firmware", type=Path, default=None)
-    parser.add_argument("--timeout", type=int, default=360)
+    parser.add_argument("--uefi-firmware", type=Path)
+    parser.add_argument("--timeout", type=int, default=300)
     parser.add_argument("--log", type=Path, required=True)
     args = parser.parse_args(argv)
     evidence = boot_probe(args.iso, firmware=args.uefi_firmware, timeout_seconds=args.timeout)

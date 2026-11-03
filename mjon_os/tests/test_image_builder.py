@@ -58,6 +58,9 @@ class LiveImageTests(unittest.TestCase):
         self.assertIn('--system-site-packages', hook)
         self.assertIn('"$1[desktop]"', hook)
         self.assertIn('mjon_os, webview', hook)
+        # The original ISO failed because srt (a Vosk dependency) has no wheel.
+        self.assertNotIn('--only-binary=:all:', hook)
+        self.assertIn('--prefer-binary', hook)
 
     def test_rejects_wheel_without_built_frontend(self) -> None:
         path = self.base / 'missing-ui.whl'

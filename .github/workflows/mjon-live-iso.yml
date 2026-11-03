@@ -51,7 +51,9 @@ jobs:
           npm ci
           npm run build
       - name: Run image and first-boot contracts
-        run: python -m unittest discover -s mjon_os/tests -p 'test_*.py' -v
+        run: |
+          python -m unittest discover -s mjon_os/tests -p 'test_*.py' -v
+          sh -n mjon_os/live/config/includes.chroot/usr/local/bin/mjon-vm-proof
       - name: Build the modified Dodaios engine wheel
         run: |
           python -m pip install --disable-pip-version-check 'setuptools>=84.1.0' wheel build
@@ -125,8 +127,8 @@ jobs:
           python -m mjon_os.qemu_boot --iso "$iso" \
             --uefi-firmware /usr/share/OVMF/OVMF_CODE_4M.fd --timeout 240 \
             --log "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
-          # A valid kernel alone is not a working desktop. Require the
-          # graphical display manager to report active from INSIDE each VM.
+          # Hardware exposed a broken Live login: the greeter alone is not enough.
+          # The replacement guest proof must exercise user/live PAM authentication.
           grep -Fq 'MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
           grep -Fq 'MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
           # Actual hardware revealed that SDDM can run before a usable live user

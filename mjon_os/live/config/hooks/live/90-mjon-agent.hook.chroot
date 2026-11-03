@@ -1,15 +1,19 @@
 #!/bin/sh
-# Install only the audited local wheel built from this monorepo checkout.
-# This runs during ISO construction, never automatically on the user's PC.
+# Embed the audited fork's desktop agent during ISO creation (never at user login).
 set -eu
 set -- /opt/mjon-ai-os/wheels/*.whl
 if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
-  echo 'MJON: expected exactly one locally built engine wheel' >&2
+  echo 'MJON: expected exactly one locally built agent wheel' >&2
   exit 1
 fi
-python3 -m venv /opt/mjon-ai-os/venv
-# Only compiled wheels are allowed: no arbitrary project build scripts in chroot.
-/opt/mjon-ai-os/venv/bin/python -m pip install --no-cache-dir --only-binary=:all: "$1"
-/opt/mjon-ai-os/venv/bin/python -c 'import dodaios, mjon_jarvis, mjon_os'
-# Drop the staged installer wheel; the installed venv remains in the image.
+# Debian distributes GTK GI bindings in its system Python, not as generic pip wheels.
+# Allow this interpreter to see only the system packages plus the isolated venv.
+/usr/bin/python3 -m venv --system-site-packages /opt/mjon-ai-os/venv
+# The local wheel is the product. Its [desktop] extra installs pywebview,
+# screenshot tools, and the desktop-specific dependencies.
+# Prefer wheels, but permit source dependencies that lack binary distributions.
+/opt/mjon-ai-os/venv/bin/python -m pip install --no-cache-dir --prefer-binary "$1[desktop]"
+/opt/mjon-ai-os/venv/bin/python -c 'import dodaios, mjon_jarvis, mjon_os, webview'
+/opt/mjon-ai-os/venv/bin/python -c 'import gi; gi.require_version("Gtk", "3.0"); gi.require_version("WebKit2", "4.1"); from gi.repository import Gtk, WebKit2'
+# Avoid distributing an extra redundant installer payload inside the Live filesystem.
 rm -rf /opt/mjon-ai-os/wheels

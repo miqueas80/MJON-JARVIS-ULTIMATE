@@ -7,6 +7,8 @@ UEFI requires OVMF CODE and a disposable copy of its matching VARS image.
 from __future__ import annotations
 
 import argparse
+import os
+import selectors
 from dataclasses import dataclass
 from pathlib import Path
 import re
@@ -88,6 +90,40 @@ def _send_boot_key(monitor: Path, *, delay_seconds: float = 5.0) -> None:
     raise RuntimeError(f"QEMU monitor not ready: {last_error}")
 
 
+
+def _collect_until_graphical_ready(process: subprocess.Popen, timeout_seconds: int) -> str:
+    """Read a live VM serial stream, stop only on a proven graphical guest target.
+
+    This avoids waiting for the whole timeout after a successful boot. The
+    sentinel is emitted exclusively from inside the disposable Linux guest.
+    """
+    chunks: list[bytes] = []
+    total_bytes = 0
+    selector = selectors.DefaultSelector()
+    try:
+        for stream in (process.stdout, process.stderr):
+            if stream is not None:
+                selector.register(stream, selectors.EVENT_READ)
+        deadline = time.monotonic() + timeout_seconds
+        while time.monotonic() < deadline and selector.get_map():
+            for key, _ in selector.select(timeout=1):
+                piece = os.read(key.fileobj.fileno(), 65536)
+                if not piece:
+                    selector.unregister(key.fileobj)
+                    continue
+                chunks.append(piece)
+                total_bytes += len(piece)
+            if total_bytes > 10 * 1024 * 1024:
+                break
+            observed = b"".join(chunks)
+            if (b"MJON_VM_PROOF KERNEL_RUNNING" in observed
+                    and b"MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE" in observed):
+                break
+    finally:
+        selector.close()
+    return b"".join(chunks).decode("utf-8", "replace")
+
+
 def boot_probe(iso: Path, *, firmware: Path | None, timeout_seconds: int = 300) -> BootEvidence:
     """Boot ISO in a disposable network-free, host-disk-free VM.
 
@@ -112,16 +148,12 @@ def boot_probe(iso: Path, *, firmware: Path | None, timeout_seconds: int = 300) 
         )
         try:
             _send_boot_key(monitor)
-            try:
-                stdout, stderr = process.communicate(timeout=timeout_seconds)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                stdout, stderr = process.communicate(timeout=20)
+            output = _collect_until_graphical_ready(process, timeout_seconds)
         finally:
             if process.poll() is None:
                 process.kill()
-                process.communicate(timeout=20)
-        output = stdout.decode("utf-8", "replace") + "\n" + stderr.decode("utf-8", "replace")
+            stdout, stderr = process.communicate(timeout=20)
+        output += stdout.decode("utf-8", "replace") + "\n" + stderr.decode("utf-8", "replace")
         return analyze_serial_log(output)
 
 

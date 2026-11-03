@@ -48,6 +48,17 @@ class LiveImageTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_wheel(wrong)
 
+    def test_image_declares_required_gtk_desktop_runtime(self) -> None:
+        root = Path(__file__).resolve().parents[1] / 'live' / 'config'
+        packages = (root / 'package-lists/mjon.list.chroot').read_text(encoding='utf-8')
+        for package in ('python3-gi', 'python3-gi-cairo', 'gir1.2-gtk-3.0',
+                        'gir1.2-webkit2-4.1', 'xwayland'):
+            self.assertIn(package, packages.splitlines())
+        hook = (root / 'hooks/live/90-mjon-agent.hook.chroot').read_text(encoding='utf-8')
+        self.assertIn('--system-site-packages', hook)
+        self.assertIn('"[desktop]"', hook.replace('$1[desktop]', '"[desktop]"'))
+        self.assertIn('import webview', hook)
+
     def test_rejects_wheel_without_built_frontend(self) -> None:
         path = self.base / 'missing-ui.whl'
         with ZipFile(path, 'w') as archive:

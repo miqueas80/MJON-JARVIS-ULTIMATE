@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 import time
 
-from mjon_os.qemu_boot import qemu_command
+from mjon_os.qemu_boot import qemu_command, _send_boot_key
 
 
 def screenshot_command(
@@ -40,15 +40,14 @@ def capture(iso: Path, *, firmware: Path | None, output: Path,
         command = screenshot_command(iso, firmware=firmware, monitor=monitor, firmware_vars=vars_copy)
         process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         try:
-            time.sleep(5)
+            _send_boot_key(monitor)
             if process.poll() is not None:
                 stderr = process.stderr.read().decode("utf-8", "replace") if process.stderr else ""
                 raise RuntimeError(f"QEMU exited early ({process.returncode}): {stderr[-1000:]}")
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as channel:
                 channel.settimeout(15)
                 channel.connect(str(monitor))
-                channel.sendall(b"sendkey ret\n")
-                time.sleep(seconds - 5)
+                time.sleep(max(1, seconds - 29))
                 channel.sendall(f"screendump {output.resolve()}\n".encode("utf-8"))
                 time.sleep(3)
             if not output.is_file() or output.stat().st_size < 100:

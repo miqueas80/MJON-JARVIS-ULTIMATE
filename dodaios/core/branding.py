@@ -27,7 +27,10 @@ from collections.abc import Mapping
 # --- Display name ------------------------------------------------------------
 # The name a person reads. Never build a path, a registry key, a file name, a
 # process name, a bundle id or a credential-store name from it.
-PRODUCT_NAME = "Dodaios"
+# A single native MJON AI OS build rebrands its visible surfaces at boot.
+# Persistent Dodaios identifiers and credentials remain untouched for
+# compatibility; this flag is only set by the OS-owned desktop launcher.
+PRODUCT_NAME = "MJON AI OS" if os.environ.get("MJON_NATIVE_OS") == "1" else "Dodaios"
 
 # --- Persistent identity anchors ---------------------------------------------
 # Compatibility contracts, not branding: these spell the names existing

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+import socket
 from pathlib import Path
 from unittest.mock import patch
 
@@ -58,6 +59,7 @@ class BootProbeTests(unittest.TestCase):
             self.assertIn(str(firmware.resolve()), drives[0])
             self.assertIn(str(variables.resolve()), drives[1])
 
+    @unittest.skipUnless(hasattr(socket, "AF_UNIX"), "QEMU monitor uses POSIX Unix sockets")
     @patch("mjon_os.qemu_boot.time.sleep")
     @patch("mjon_os.qemu_boot.socket.socket")
     def test_start_key_is_sent_only_to_vm_monitor(self, make_socket, sleep):

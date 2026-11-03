@@ -22,6 +22,7 @@ _RESOURCE_ROOT = Path(__file__).resolve().parent / 'live'
 _REQUIRED_WHEEL_FILES = frozenset({
     'mjon_jarvis/spanish_bridge.py',
     'mjon_os/config_paths.py',
+    'dodaios/ui/web/dist/index.html',
 })
 _AUTO_CONFIG = '''#!/bin/sh
 set -eu
@@ -59,6 +60,8 @@ def validate_wheel(path: Path) -> str:
                 raise ValueError('Wheel is missing its version')
             missing = _REQUIRED_WHEEL_FILES - names
             if missing:
+                if 'dodaios/ui/web/dist/index.html' in missing:
+                    raise ValueError('Wheel lacks the built desktop frontend')
                 raise ValueError('Wheel lacks native MJON modules: ' + ', '.join(sorted(missing)))
             return version
     except (BadZipFile, UnicodeError, OSError) as exc:

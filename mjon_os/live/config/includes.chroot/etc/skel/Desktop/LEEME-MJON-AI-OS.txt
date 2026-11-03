@@ -1,0 +1,31 @@
+BIENVENIDO A MJON AI OS — PRUEBA LIVE POR USB
+=============================================
+
+Estás usando una versión experimental de MJON AI OS.
+El sistema se ejecuta desde USB. No incluye un instalador de Debian.
+
+PRIMERAS COMPROBACIONES
+
+1. Verificá el escritorio KDE, teclado, mouse, Wi-Fi y audio.
+2. Abrí la aplicación "MJON AI OS - JARVIS".
+3. Para comprobar el estado del sistema, abrí Konsole y escribí:
+
+   mjon-doctor --json
+
+4. Si JARVIS no abre, mirá los registros (sin modificar el sistema):
+
+   systemctl --user status mjon-jarvis.service --no-pager
+   journalctl --user -u mjon-jarvis.service -b --no-pager -n 50
+
+5. Primera orden segura para probar: "Jarvis, abrí calculadora".
+   Si el reconocimiento de voz todavía no está disponible, usá el chat.
+
+IMPORTANTE
+- No formatees, montes ni modifiques las particiones internas de Windows.
+- La IA no tiene acceso ilimitado de administrador.
+- Es posible que las funciones de voz o razonamiento offline necesiten
+  modelos que todavía no estén incluidos.
+- Para volver a Windows, apagá correctamente, retirá el USB y encendé otra vez.
+
+Proyecto: https://github.com/miqueas80/MJON-JARVIS-ULTIMATE
+Basado en Debian Linux y software abierto Dodaios, con atribución conservada.

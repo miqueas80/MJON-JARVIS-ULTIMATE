@@ -39,7 +39,10 @@ jobs:
       - name: Verify prior ISO matches its checksum
         run: |
           cd "$RUNNER_TEMP/mjon-iso"
-          sha256sum -c MJON-AI-OS-dev-amd64.iso.sha256
+          expected="$(awk '{print $1}' MJON-AI-OS-dev-amd64.iso.sha256)"
+          actual="$(sha256sum MJON-AI-OS-dev-amd64.iso | awk '{print $1}')"
+          test "$expected" = "$actual"
+          echo 'ISO checksum verified.'
       - name: Install virtual machine emulator
         run: |
           sudo apt-get update -qq

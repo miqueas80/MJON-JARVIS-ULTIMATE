@@ -1,5 +1,10 @@
 # Debian 13 KDE desktop, native session integration, and voice/desktop dependencies.
 live-task-kde
+# Required for a visible login screen when apt recommends are disabled.
+sddm
+sddm-theme-debian-breeze
+xserver-xorg
+libpam-systemd
 # Harmless desktop apps guaranteed for Spanish Jarvis smoke tests.
 kate
 kcalc

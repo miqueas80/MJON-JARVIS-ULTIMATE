@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=MJON AI OS - JARVIS
+Comment=Launch the native MJON intelligent desktop session
+Exec=systemctl --user start mjon-jarvis.service
+Terminal=false
+OnlyShowIn=KDE;
+X-GNOME-Autostart-enabled=true

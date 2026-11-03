@@ -115,6 +115,9 @@ def prepare_image(*, repo_root: Path, wheel: Path, destination: Path) -> dict[st
         config_dir = includes / 'usr/share/mjon-ai-os'
         config_dir.mkdir(parents=True)
         shutil.copy2(repo_root / 'dodaios.toml.example', config_dir / 'dodaios.toml.example')
+        (config_dir / 'build-manifest.json').write_text(
+            json.dumps(metadata, indent=2, ensure_ascii=False) + '\n', encoding='utf-8',
+        )
         license_dir = includes / 'usr/share/doc/mjon-ai-os/upstream'
         license_dir.mkdir(parents=True)
         for name in ('LICENSE', 'NOTICE'):

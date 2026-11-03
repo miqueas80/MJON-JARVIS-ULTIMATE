@@ -10,6 +10,24 @@
 - Writing an ISO **erases the selected USB drive**. Confirm the removable drive twice; never select the Windows system disk.
 - Hardware support (Wi-Fi chipset, GPU firmware, touchpad, audio, keyboard) requires live testing.
 
+## Hardware finding: graphical login failed on 2026-11-03
+
+The source `7b139ea9d510` ISO booted Debian 13 and presented SDDM, but the
+physical Conectar Igualdad laptop reported `user (automatic login)` followed by
+`Authentication failure` on tty3. The live-build configuration disabled APT
+recommends and omitted `user-setup`, which Debian Live explicitly requires to
+create its temporary account. **That pre-release must not be treated as a usable
+USB login candidate.**
+
+The replacement build now explicitly includes `live-config`,
+`live-config-systemd`, `user-setup`, and `sudo`. Its QEMU boot gate refuses
+success unless the expected `user` exists, has its home directory and its
+password is not locked. It does **not** claim to simulate a full interactive
+keyboard password entry; physical testing is still necessary.
+
+Use only a subsequently verified source commit and checksum. Replacing the
+ISO on Ventoy does not format the internal Windows disk.
+
 ## Before the user's first USB test
 
 1. CI must build an ISO with a documented source commit and both BIOS and UEFI boot records.

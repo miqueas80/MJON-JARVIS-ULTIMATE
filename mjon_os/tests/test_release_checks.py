@@ -21,7 +21,8 @@ class USBReleaseTests(unittest.TestCase):
         bios = root / "boot-bios-serial.txt"
         uefi = root / "boot-uefi-serial.txt"
         for text in (bios, uefi):
-            text.write_text("MJON_VM_EVIDENCE kernel=True userspace=True\n")
+            text.write_text("MJON_VM_EVIDENCE kernel=True userspace=True live_user=True\n"
+                            "MJON_VM_PROOF LIVE_USER_READY\n")
         return iso, sha, boot, bios, uefi
 
     def test_valid_candidate_inputs(self):
@@ -40,6 +41,14 @@ class USBReleaseTests(unittest.TestCase):
             iso, sha, boot, bios, uefi = self._inputs(Path(tmp))
             bios.write_text("")
             with self.assertRaisesRegex(ValueError, "BIOS VM"):
+                check_candidate(iso, sha, boot, bios, uefi, min_bytes=1)
+
+    def test_release_refuses_greeter_when_live_user_is_missing(self):
+        with TemporaryDirectory() as tmp:
+            iso, sha, boot, bios, uefi = self._inputs(Path(tmp))
+            bios.write_text("MJON_VM_EVIDENCE kernel=True userspace=True live_user=False\n"
+                            "MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE\n")
+            with self.assertRaisesRegex(ValueError, "Live user"):
                 check_candidate(iso, sha, boot, bios, uefi, min_bytes=1)
 
     def test_uefi_is_required(self):

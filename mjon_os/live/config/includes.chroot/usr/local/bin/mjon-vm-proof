@@ -7,3 +7,10 @@ printf 'MJON_VM_PROOF KERNEL_RUNNING\n' > /dev/ttyS0
 if systemctl is-active --quiet display-manager.service; then
   printf 'MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE\n' > /dev/ttyS0
 fi
+# A visible greeter is NOT proof that a real live account exists. An earlier
+# image passed the graphical checks but failed to authenticate on real hardware.
+# Fail closed unless live-config created the user, home and usable password.
+if id user >/dev/null 2>&1 && [ -d /home/user ] && \
+   [ "$(passwd -S user 2>/dev/null | awk '{print $2}')" = "P" ]; then
+  printf 'MJON_VM_PROOF LIVE_USER_READY\n' > /dev/ttyS0
+fi

@@ -55,6 +55,8 @@ class LiveImageTests(unittest.TestCase):
                         'gir1.2-webkit2-4.1', 'xwayland',
                         'kate', 'kcalc', 'dolphin', 'konsole',
                         'sddm', 'sddm-theme-debian-breeze', 'libpam-systemd',
+                        'live-boot', 'live-config', 'live-config-systemd',
+                        'user-setup', 'sudo',
                         'firmware-iwlwifi', 'firmware-realtek', 'firmware-atheros',
                         'firmware-sof-signed'):
             self.assertIn(package, packages.splitlines())

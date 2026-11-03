@@ -12,5 +12,9 @@ fi
 # Fail closed unless live-config created the user, home and usable password.
 if id user >/dev/null 2>&1 && [ -d /home/user ] && \
    [ "$(passwd -S user 2>/dev/null | awk '{print $2}')" = "P" ]; then
-  printf 'MJON_VM_PROOF LIVE_USER_READY\n' > /dev/ttyS0
+  # Test actual Debian Live default credentials through PAM. No account
+  # changes are performed, and credentials are never written to the log.
+  if printf '%s\n' 'live' | timeout 10 pamtester login user authenticate >/dev/null 2>&1; then
+    printf 'MJON_VM_PROOF LIVE_USER_READY\n' > /dev/ttyS0
+  fi
 fi

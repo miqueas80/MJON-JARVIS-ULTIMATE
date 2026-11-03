@@ -67,7 +67,8 @@ class BootProbeTests(unittest.TestCase):
         _send_boot_key(Path("/tmp/mjon-monitor.sock"), delay_seconds=0)
         instance = make_socket.return_value.__enter__.return_value
         instance.connect.assert_called_once_with("/tmp/mjon-monitor.sock")
-        instance.sendall.assert_called_once_with(b"sendkey ret\n")
+        self.assertEqual(instance.sendall.call_count, 3)
+        instance.sendall.assert_any_call(b"sendkey ret\n")
 
     def test_unavailable_image_refuses_to_spawn(self):
         with self.assertRaises(FileNotFoundError):

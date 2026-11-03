@@ -11,6 +11,8 @@
 - **Private state:** `$XDG_CONFIG_HOME/mjon-ai-os/dodaios.toml` and `$XDG_DATA_HOME/mjon-ai-os` (defaults under `~/.config` and `~/.local/share`).
 - **Defaults:** Jarvis wake phrase, Spanish language preference, upstream self-autostart disabled to avoid duplicate instances.
 - **Permissions:** logged-in user, no root for AI, `NoNewPrivileges=yes`, upstream approvals retained.
+- **Desktop runtime:** Debian GTK 3 + WebKit2 4.1 system bindings and the fork wheel's `[desktop]` extras; the venv explicitly reads system GI bindings.
+- **Live diagnostics:** `/usr/local/bin/mjon-doctor --json` checks graphical session, physical memory and the user service without elevating privileges.
 
 ### Why we do not fork the Linux kernel
 
@@ -27,16 +29,23 @@ The preparer is side-effect-free for host system settings. It writes only a **ne
 ## Build preparation (developer/Linux host only)
 
 1. Review the upstream source and the fork's changes; keep `LICENSE` and `NOTICE`.
-2. Build the repository's actual Python wheel using its existing `pyproject.toml`/setuptools setup, after building the upstream frontend if required:
+2. Build the real frontend **before** packaging the wheel. An image without the desktop bundle is rejected:
+   ```shell
+   cd dodaios/ui/web/frontend
+   npm ci
+   npm run build
+   cd ../../../..
+   ```
+3. Build the repository's own wheel using its existing `pyproject.toml`/setuptools setup:
    ```shell
    python3 -m pip install --upgrade 'setuptools>=84.1.0' wheel build
    python3 -m build --wheel --no-isolation -o /tmp/mjon-wheels
    ```
-3. Prepare the Debian live-build workspace from **that** wheel:
+4. Prepare the Debian live-build workspace from **that** wheel:
    ```shell
    python3 -m mjon_os.image_builder --wheel /tmp/mjon-wheels/dodaios-4.1.2-py3-none-any.whl --workdir /tmp/mjon-live
    ```
-4. On a controlled Debian 13 build host with `live-build` installed, explicitly run:
+5. On a controlled Debian 13 build host with `live-build` installed, explicitly run:
    ```shell
    cd /tmp/mjon-live
    sudo lb config
@@ -44,6 +53,8 @@ The preparer is side-effect-free for host system settings. It writes only a **ne
    ```
 
 The final commands can download many packages and consume substantial CPU, RAM, disk and network. They are **not** executed on the user's Windows machine. The preparer does not create an ISO by itself.
+
+The optional [experimental USB ISO workflow](../.github/workflows/mjon-live-iso.yml) performs that build on a disposable CI runner and checks the ISO boot records. **An image still must pass VM boot and desktop tests before being offered for USB use.** The [hardware runbook](USB_LIVE_TEST.md) records the eventual safe USB procedure.
 
 ## Release blockers — NOT a finished OS
 

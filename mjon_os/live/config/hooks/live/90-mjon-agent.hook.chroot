@@ -18,5 +18,11 @@ fi
 # The whole OS ships a single native agent: verify the real action router.
 MJON_NATIVE_OS=1 /opt/mjon-ai-os/venv/bin/python -c 'from dodaios.brain.local_action_gate import match_local_action; p = match_local_action("Jarvis, abrí calculadora", lang="es"); assert p and p.tool_calls[0].name == "open_app" and p.tool_calls[0].args == {"app_name": "kcalc"}'
 
+# This service runs only under virtualized Linux and reports graphical boot
+# via the emulated serial port; normal USB hardware does not run it.
+mkdir -p /etc/systemd/system/graphical.target.wants
+ln -s /usr/lib/systemd/system/mjon-vm-proof.service \
+  /etc/systemd/system/graphical.target.wants/mjon-vm-proof.service
+
 # Avoid distributing an extra redundant installer payload inside the Live filesystem.
 rm -rf /opt/mjon-ai-os/wheels

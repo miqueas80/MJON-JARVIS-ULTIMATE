@@ -74,6 +74,12 @@ def _send_boot_key(monitor: Path, *, delay_seconds: float = 5.0) -> None:
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
                 sock.settimeout(5)
                 sock.connect(str(monitor))
+                # SeaBIOS appears quickly; OVMF/GRUB may take longer.
+                # Repeated Enter only acts inside this disposable VM.
+                sock.sendall(b"sendkey ret\n")
+                time.sleep(12)
+                sock.sendall(b"sendkey ret\n")
+                time.sleep(12)
                 sock.sendall(b"sendkey ret\n")
                 return
         except OSError as exc:

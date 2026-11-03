@@ -1,0 +1,14 @@
+#!/bin/sh
+# A single native JARVIS instance, launched as the logged-in KDE user.
+set -eu
+: "${HOME:?HOME must be set by the graphical user session}"
+config_home="${XDG_CONFIG_HOME:-$HOME/.config}/mjon-ai-os"
+data_home="${XDG_DATA_HOME:-$HOME/.local/share}/mjon-ai-os"
+export MJON_AI_OS_CONFIG_ROOT="$config_home"
+export JARVIS_DATA_DIR="$data_home"
+export JARVIS_INSTANCE=default
+engine=/opt/mjon-ai-os/venv/bin/python
+"$engine" -m mjon_os.first_boot \
+  --template /usr/share/mjon-ai-os/dodaios.toml.example \
+  --config "$config_home/dodaios.toml" --data "$data_home"
+exec "$engine" -m dodaios.ui.web.launcher

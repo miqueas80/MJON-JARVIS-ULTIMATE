@@ -129,6 +129,10 @@ jobs:
           # graphical display manager to report active from INSIDE each VM.
           grep -Fq 'MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
           grep -Fq 'MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
+          # Actual hardware revealed that SDDM can run before a usable live user
+          # exists. Never mark ISO boot verified without account and password.
+          grep -Fq 'MJON_VM_PROOF LIVE_USER_READY' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
+          grep -Fq 'MJON_VM_PROOF LIVE_USER_READY' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
       - name: Upload experimental ISO for virtual-machine testing (not release)
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

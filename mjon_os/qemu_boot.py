@@ -24,6 +24,7 @@ import time
 class BootEvidence:
     kernel: bool
     userspace: bool
+    live_user: bool
     excerpt: str
 
 
@@ -35,7 +36,8 @@ def analyze_serial_log(log: str) -> BootEvidence:
     """Boot menus and ISO signatures are never sufficient proof of kernel boot."""
     lines = log.splitlines()
     excerpt = "\n".join([*lines[:20], "...", *lines[-70:]])
-    return BootEvidence(bool(_KERNEL_RE.search(log)), bool(_USERSPACE_RE.search(log)), excerpt)
+    return BootEvidence(bool(_KERNEL_RE.search(log)), bool(_USERSPACE_RE.search(log)),
+                        'MJON_VM_PROOF LIVE_USER_READY' in log, excerpt)
 
 
 def qemu_command(
@@ -117,7 +119,8 @@ def _collect_until_graphical_ready(process: subprocess.Popen, timeout_seconds: i
                 break
             observed = b"".join(chunks)
             if (b"MJON_VM_PROOF KERNEL_RUNNING" in observed
-                    and b"MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE" in observed):
+                    and b"MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE" in observed
+                    and b"MJON_VM_PROOF LIVE_USER_READY" in observed):
                 break
     finally:
         selector.close()
@@ -166,12 +169,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     evidence = boot_probe(args.iso, firmware=args.uefi_firmware, timeout_seconds=args.timeout)
     args.log.write_text(
-        f"MJON_VM_EVIDENCE kernel={evidence.kernel} userspace={evidence.userspace}\n"
+        f"MJON_VM_EVIDENCE kernel={evidence.kernel} userspace={evidence.userspace} live_user={evidence.live_user}\n"
         + evidence.excerpt + "\n", encoding="utf-8",
     )
     label = "UEFI" if args.uefi_firmware is not None else "BIOS"
-    print(f"{label} boot evidence: kernel={evidence.kernel}, userspace={evidence.userspace}")
-    if not evidence.kernel or not evidence.userspace:
+    print(f"{label} boot evidence: kernel={evidence.kernel}, userspace={evidence.userspace}, live_user={evidence.live_user}")
+    if not evidence.kernel or not evidence.userspace or not evidence.live_user:
         print(evidence.excerpt, file=sys.stderr)
         return 1
     return 0

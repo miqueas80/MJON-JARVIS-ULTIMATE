@@ -6,6 +6,7 @@ All supported application identifiers already belong to Dodaios' open_app tool.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 import re
 import unicodedata
 
@@ -36,6 +37,14 @@ _APPLICATIONS = {
     "spotify": "spotify",
     "discord": "discord",
     "whatsapp": "whatsapp",
+}
+# The native OS uses KDE; Windows executable aliases are not valid there.
+# Do not change upstream non-native installations or perform execution here.
+_NATIVE_KDE_APPS = {
+    "bloc de notas": "kate", "notas": "kate", "notepad": "kate",
+    "calculadora": "kcalc", "calc": "kcalc",
+    "explorador de archivos": "dolphin", "explorador": "dolphin", "explorer": "dolphin",
+    "terminal": "konsole", "terminal de windows": "konsole", "windows terminal": "konsole",
 }
 _OPEN_RE = re.compile(r"^(?:abre|abri|abrir|inicia)\s+(?P<target>.+)$")
 _GUI_RE = re.compile(
@@ -92,6 +101,8 @@ def parse_spanish_request(text: str) -> SpanishDesktopRequest | None:
         name = re.sub(r"^(?:el|la|los|las|un|una)\s+", "", name)
         name = re.sub(r"\s+por favor$", "", name)
         app = _APPLICATIONS.get(name)
+        if os.environ.get("MJON_NATIVE_OS") == "1":
+            app = _NATIVE_KDE_APPS.get(name, app)
         if app is None:
             return None
         return SpanishDesktopRequest("computer_use") if len(parts) > 1 else SpanishDesktopRequest("launch", app)

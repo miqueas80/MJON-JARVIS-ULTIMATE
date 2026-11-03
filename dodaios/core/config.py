@@ -65,7 +65,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 # ``jarvis.toml`` while the checkout has one (it is never renamed), else
 # ``dodaios.toml``: resolved once, like every other path constant here, so the
 # reader and every writer in ``config_writer`` address the same file (AP-7).
-DEFAULT_CONFIG_FILE = resolve_config_file(PROJECT_ROOT)
+# MJON AI OS sets a per-user configuration root at graphical login.
+# A normal Dodaios installation still resolves from the original project root.
+from mjon_os.config_paths import config_root
+
+DEFAULT_CONFIG_FILE = resolve_config_file(config_root(PROJECT_ROOT, os.environ))
 PROFILES_DIR = PROJECT_ROOT / "profiles"
 
 

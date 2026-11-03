@@ -56,7 +56,7 @@ class LiveImageTests(unittest.TestCase):
                         'kate', 'kcalc', 'dolphin', 'konsole',
                         'sddm', 'sddm-theme-debian-breeze', 'libpam-systemd',
                         'live-boot', 'live-config', 'live-config-systemd',
-                        'user-setup', 'sudo',
+                        'user-setup', 'sudo', 'pamtester',
                         'firmware-iwlwifi', 'firmware-realtek', 'firmware-atheros',
                         'firmware-sof-signed'):
             self.assertIn(package, packages.splitlines())
@@ -67,6 +67,9 @@ class LiveImageTests(unittest.TestCase):
         # The original ISO failed because srt (a Vosk dependency) has no wheel.
         self.assertNotIn('--only-binary=:all:', hook)
         self.assertIn('--prefer-binary', hook)
+        guest_probe = (root / 'includes.chroot/usr/local/bin/mjon-vm-proof').read_text(encoding='utf-8')
+        self.assertIn('pamtester login user authenticate', guest_probe)
+        self.assertIn('LIVE_USER_READY', guest_probe)
 
     def test_rejects_wheel_without_built_frontend(self) -> None:
         path = self.base / 'missing-ui.whl'

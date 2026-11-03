@@ -17,8 +17,8 @@ class ConfigRootTests(unittest.TestCase):
         self.assertEqual(config_root(Path('/some/checkout'), {}), Path('/some/checkout'))
 
     def test_native_os_uses_per_user_path(self) -> None:
-        self.assertEqual(config_root(Path('/some/checkout'), {'MJON_AI_OS_CONFIG_ROOT': '/home/demo/.config/mjon-ai-os'}),
-                         Path('/home/demo/.config/mjon-ai-os'))
+        target = (Path.cwd() / 'test-user' / '.config' / 'mjon-ai-os').resolve()
+        self.assertEqual(config_root(Path('/some/checkout'), {'MJON_AI_OS_CONFIG_ROOT': str(target)}), target)
 
     def test_empty_override_does_not_change_upstream(self) -> None:
         self.assertEqual(config_root(Path('/some/checkout'), {'MJON_AI_OS_CONFIG_ROOT': '  '}), Path('/some/checkout'))

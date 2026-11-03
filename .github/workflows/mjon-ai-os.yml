@@ -12,6 +12,10 @@ on:
       - '.github/workflows/mjon-ai-os.yml'
   workflow_dispatch:
 
+concurrency:
+  group: mjon-foundation-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

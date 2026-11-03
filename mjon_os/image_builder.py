@@ -113,6 +113,8 @@ def prepare_image(*, repo_root: Path, wheel: Path, destination: Path) -> dict[st
         launcher.chmod(0o755)
         doctor = staging / 'config/includes.chroot/usr/local/bin/mjon-doctor'
         doctor.chmod(0o755)
+        vm_marker = staging / 'config/includes.chroot/usr/local/bin/mjon-vm-proof'
+        vm_marker.chmod(0o755)
 
         includes = staging / 'config/includes.chroot'
         wheels_dir = includes / 'opt/mjon-ai-os/wheels'

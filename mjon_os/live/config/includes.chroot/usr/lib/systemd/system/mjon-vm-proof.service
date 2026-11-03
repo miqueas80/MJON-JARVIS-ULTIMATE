@@ -1,0 +1,13 @@
+[Unit]
+Description=MJON AI OS - read-only virtual boot proof
+ConditionVirtualization=vm
+After=display-manager.service
+Wants=display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/mjon-vm-proof
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=graphical.target

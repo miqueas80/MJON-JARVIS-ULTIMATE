@@ -1,6 +1,7 @@
 """Per-user bootstrap contracts: no root writes or overwritten preferences."""
 from __future__ import annotations
 
+import os
 import tempfile
 import tomllib
 import unittest
@@ -25,11 +26,12 @@ enabled = true
 
 class FirstBootTests(unittest.TestCase):
     def test_personalization_preserves_other_fields_and_sets_jarvis(self):
-        raw = personalize_template(_SAMPLE, Path('/home/demouser/.local/share/mjon-ai-os'))
+        data_directory = (Path.cwd() / 'test-user' / '.local' / 'share' / 'mjon-ai-os').resolve()
+        raw = personalize_template(_SAMPLE, data_directory)
         fields = tomllib.loads(raw)
         self.assertEqual(fields['trigger']['wake_word']['phrase'], 'Jarvis')
         self.assertEqual(fields['stt']['language'], 'es')
-        self.assertEqual(fields['memory']['data_dir'], '/home/demouser/.local/share/mjon-ai-os')
+        self.assertEqual(fields['memory']['data_dir'], str(data_directory))
         self.assertFalse(fields['autostart']['enabled'])
         self.assertTrue(fields['other']['enabled'])
 
@@ -41,7 +43,8 @@ class FirstBootTests(unittest.TestCase):
             config = base/'settings'/'dodaios.toml'
             data = base/'state'
             self.assertTrue(provision_user_config(template, config, data))
-            self.assertEqual(config.stat().st_mode & 0o777, 0o600)
+            if os.name == 'posix':
+                self.assertEqual(config.stat().st_mode & 0o777, 0o600)
             self.assertTrue(data.is_dir())
             self.assertEqual(tomllib.loads(config.read_text())['memory']['data_dir'], str(data))
 

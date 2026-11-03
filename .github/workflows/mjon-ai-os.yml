@@ -1,0 +1,77 @@
+# MJON AI OS - verifies the native image inputs without publishing an untested ISO.
+name: MJON AI OS foundation
+
+on:
+  push:
+    branches: [feature/mjon-ai-os-native]
+    paths:
+      - 'mjon_os/**'
+      - 'mjon_jarvis/**'
+      - 'setup.py'
+      - 'dodaios/core/config.py'
+      - '.github/workflows/mjon-ai-os.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-tests:
+    name: Native OS contracts (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout one unified repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          lfs: false
+      - name: Use Python 3.13
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Test image preparation and native first boot
+        run: python -m unittest discover -s mjon_os/tests -p 'test_*.py' -v
+      - name: Check shell scripts
+        if: runner.os == 'Linux'
+        run: |
+          sh -n mjon_os/live/config/hooks/live/90-mjon-agent.hook.chroot
+          sh -n mjon_os/live/config/includes.chroot/usr/local/bin/mjon-session
+
+  packaging-contract:
+    name: Wheel includes native brain and OS
+    needs: native-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout one unified repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          lfs: false
+      - name: Use Python 3.13
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Install Python wheel builder
+        run: python -m pip install --disable-pip-version-check 'setuptools>=84.1.0' wheel build
+      - name: Build wheel from this fork (without installing it)
+        run: python -m build --wheel --no-isolation -o "$RUNNER_TEMP/wheels"
+      - name: Validate wheel and stage live-build tree
+        env:
+          MJON_CI_TMP: ${{ runner.temp }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from mjon_os.image_builder import prepare_image
+          tmp = Path(os.environ['MJON_CI_TMP'])
+          wheels = list((tmp / 'wheels').glob('dodaios-*.whl'))
+          assert len(wheels) == 1, f'Expected one fork wheel, found {wheels}'
+          result = prepare_image(repo_root=Path.cwd(), wheel=wheels[0], destination=tmp / 'mjon-live')
+          assert result['product'] == 'MJON AI OS'
+          assert (tmp / 'mjon-live' / 'auto' / 'config').is_file()
+          print('Prepared image input:', result)
+          PY

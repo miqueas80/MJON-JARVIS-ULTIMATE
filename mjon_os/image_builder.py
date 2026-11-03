@@ -1,7 +1,7 @@
 """Prepare a Debian 13 live-build tree with the fork's own Dodaios wheel.
 
 Preparation uses only Python's standard library and makes no system changes.
-An ISO is produced only by a separate explicit \`\`lb config\`\` / \`\`lb build\`\`.
+An ISO is produced only by a separate explicit ``lb config`` / ``lb build``.
 """
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ lb config noauto \
   --archive-areas "main contrib non-free-firmware" \
   --apt-recommends false \
   --bootappend-live "boot=live components locales=es_AR.UTF-8 keyboard-layouts=latam" \
-  "\${@}"
+  "${@}"
 '''
 
 

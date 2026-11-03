@@ -1,0 +1,15 @@
+#!/bin/sh
+# Install only the audited local wheel built from this monorepo checkout.
+# This runs during ISO construction, never automatically on the user's PC.
+set -eu
+set -- /opt/mjon-ai-os/wheels/*.whl
+if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
+  echo 'MJON: expected exactly one locally built engine wheel' >&2
+  exit 1
+fi
+python3 -m venv /opt/mjon-ai-os/venv
+# Only compiled wheels are allowed: no arbitrary project build scripts in chroot.
+/opt/mjon-ai-os/venv/bin/python -m pip install --no-cache-dir --only-binary=:all: "$1"
+/opt/mjon-ai-os/venv/bin/python -c 'import dodaios, mjon_jarvis, mjon_os'
+# Drop the staged installer wheel; the installed venv remains in the image.
+rm -rf /opt/mjon-ai-os/wheels

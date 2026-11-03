@@ -1,0 +1,63 @@
+# Reuse a previously built ISO to diagnose BIOS/UEFI screens without a full rebuild.
+name: MJON AI OS - VM screenshot diagnosis
+
+on:
+  push:
+    branches: [feature/mjon-ai-os-native]
+    paths:
+      - 'mjon_os/vm_capture.py'
+      - 'mjon_os/tests/test_vm_capture.py'
+      - '.github/workflows/mjon-vm-diagnostics.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mjon-vm-capture-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  captures:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Validate capture safety contract
+        run: python -m unittest discover -s mjon_os/tests -p 'test_vm_capture.py' -v
+      - name: Download prior experimental ISO (no rebuild)
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 41704101235
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          name: mjon-ai-os-developer-iso-9229bf249b2bb2853a8dc551c387c5fe04db95b8
+          path: ${{ runner.temp }}/mjon-iso
+      - name: Verify prior ISO matches its checksum
+        run: |
+          cd "$RUNNER_TEMP/mjon-iso"
+          sha256sum -c MJON-AI-OS-dev-amd64.iso.sha256
+      - name: Install virtual machine emulator
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends qemu-system-x86 ovmf
+      - name: Capture BIOS screen
+        run: |
+          python -m mjon_os.vm_capture --iso "$RUNNER_TEMP/mjon-iso/MJON-AI-OS-dev-amd64.iso" --seconds 85 --output "$RUNNER_TEMP/mjon-bios.ppm"
+      - name: Capture UEFI screen
+        if: success()
+        run: |
+          python -m mjon_os.vm_capture --iso "$RUNNER_TEMP/mjon-iso/MJON-AI-OS-dev-amd64.iso" --firmware /usr/share/OVMF/OVMF_CODE_4M.fd --seconds 85 --output "$RUNNER_TEMP/mjon-uefi.ppm"
+      - name: Upload screenshots for inspection
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: mjon-vm-screens-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/mjon-bios.ppm
+            ${{ runner.temp }}/mjon-uefi.ppm
+          retention-days: 5
+          if-no-files-found: warn

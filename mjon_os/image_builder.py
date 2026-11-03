@@ -28,8 +28,9 @@ _AUTO_CONFIG = '''#!/bin/sh
 set -eu
 lb config noauto \
   --distribution trixie \
-  --architectures amd64 \
-  --binary-images iso-hybrid \
+  --architecture amd64 \
+  --binary-image iso-hybrid \
+  --bootloaders "syslinux grub-efi" \
   --debian-installer none \
   --archive-areas "main contrib non-free-firmware" \
   --apt-recommends false \

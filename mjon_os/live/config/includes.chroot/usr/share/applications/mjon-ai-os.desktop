@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=MJON AI OS - JARVIS
+Comment=Open the native MJON AI assistant
+Exec=systemctl --user start mjon-jarvis.service
+Terminal=false
+Icon=computer
+Categories=Utility;System;

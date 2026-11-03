@@ -112,6 +112,19 @@ jobs:
           mv "$iso.sha256" "$MJON_CI_TMP/mjon-live/MJON-AI-OS-dev-amd64.iso.sha256"
           # Update checksum to use the final filename, not its previous staging name.
           sha256sum "$MJON_CI_TMP/mjon-live/MJON-AI-OS-dev-amd64.iso" > "$MJON_CI_TMP/mjon-live/MJON-AI-OS-dev-amd64.iso.sha256"
+      - name: Boot the ISO in isolated BIOS and UEFI virtual machines
+        env:
+          MJON_CI_TMP: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends qemu-system-x86 ovmf
+          iso="$MJON_CI_TMP/mjon-live/MJON-AI-OS-dev-amd64.iso"
+          python -m mjon_os.qemu_boot --iso "$iso" --timeout 300 \
+            --log "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
+          python -m mjon_os.qemu_boot --iso "$iso" \
+            --uefi-firmware /usr/share/OVMF/OVMF_CODE_4M.fd --timeout 300 \
+            --log "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
       - name: Upload experimental ISO for virtual-machine testing (not release)
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -122,6 +135,8 @@ jobs:
             ${{ runner.temp }}/mjon-live/MJON-AI-OS-dev-amd64.iso.sha256
             ${{ runner.temp }}/mjon-live/mjon-build.json
             ${{ runner.temp }}/mjon-live/boot-records.txt
+            ${{ runner.temp }}/mjon-live/boot-bios-serial.txt
+            ${{ runner.temp }}/mjon-live/boot-uefi-serial.txt
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
@@ -133,5 +148,7 @@ jobs:
           path: |
             ${{ runner.temp }}/mjon-live/mjon-build.log
             ${{ runner.temp }}/mjon-live/mjon-build.json
+            ${{ runner.temp }}/mjon-live/boot-bios-serial.txt
+            ${{ runner.temp }}/mjon-live/boot-uefi-serial.txt
           if-no-files-found: ignore
           retention-days: 7

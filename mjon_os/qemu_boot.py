@@ -75,7 +75,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--log", type=Path, required=True)
     args = parser.parse_args(argv)
     evidence = boot_probe(args.iso, firmware=args.uefi_firmware, timeout_seconds=args.timeout)
-    args.log.write_text(evidence.excerpt + "\n", encoding="utf-8")
+    args.log.write_text(
+        f"MJON_VM_EVIDENCE kernel={evidence.kernel} userspace={evidence.userspace}\n"
+        + evidence.excerpt + "\n", encoding="utf-8",
+    )
     label = "UEFI" if args.uefi_firmware is not None else "BIOS"
     print(f"{label} boot evidence: kernel={evidence.kernel}, userspace={evidence.userspace}")
     if not evidence.kernel or not evidence.userspace:

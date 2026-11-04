@@ -61,6 +61,10 @@ class LiveImageTests(unittest.TestCase):
                         'sddm', 'sddm-theme-debian-breeze', 'libpam-systemd',
                         'live-boot', 'live-config', 'live-config-systemd',
                         'user-setup', 'sudo', 'pamtester',
+                        # Hardware RTL8822CE booted and loaded firmware, yet
+                        # NetworkManager showed Wi-Fi unavailable. With
+                        # apt-recommends disabled its Wi-Fi backend was omitted.
+                        'wpasupplicant', 'wireless-regdb', 'rfkill', 'plasma-nm',
                         'firmware-iwlwifi', 'firmware-realtek', 'firmware-atheros',
                         'firmware-sof-signed'):
             self.assertIn(package, packages.splitlines())

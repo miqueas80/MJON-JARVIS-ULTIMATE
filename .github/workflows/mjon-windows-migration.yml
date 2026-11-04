@@ -1,0 +1,50 @@
+name: MJON Windows migration contracts
+
+on:
+  push:
+    branches: [feature/mjon-windows-migration]
+    paths:
+      - 'mjon_windows/**'
+      - 'mjon_os/ai_fabric.py'
+      - 'mjon_os/local_inference.py'
+      - 'mjon_jarvis/**'
+      - 'setup.py'
+      - '.github/workflows/mjon-windows-migration.yml'
+  pull_request:
+    paths:
+      - 'mjon_windows/**'
+      - 'mjon_os/ai_fabric.py'
+      - 'mjon_os/local_inference.py'
+      - 'mjon_jarvis/**'
+      - 'setup.py'
+      - '.github/workflows/mjon-windows-migration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-backend-contracts:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          lfs: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Test Windows migration backend
+        run: python -m unittest discover -s mjon_windows/tests -p "test_*.py" -v
+      - name: Preserve native AI routing contracts
+        run: python -m unittest discover -s mjon_os/tests -p "test_ai_fabric.py" -v
+      - name: Preserve local-only inference contracts
+        run: python -m unittest discover -s mjon_os/tests -p "test_local_inference.py" -v
+      - name: Preserve Spanish JARVIS integration
+        run: python -m unittest discover -s mjon_jarvis/smoke -p "test_*.py" -v
+      - name: Verify CLI catalog without installing engines
+        run: python -m mjon_windows --catalog

@@ -162,9 +162,11 @@ def inspect_modules(
     result = []
     for module in CATALOG:
         installed = _is_present(module, checker, distributions)
+        status = ("remote_opt_in" if module.remote else
+                  "installed_unverified" if installed else "not_installed")
         result.append({
             "id": module.module_id, "name": module.title,
-            "domain": module.domain, "status": "installed_unverified" if installed else "not_installed",
+            "domain": module.domain, "status": status,
             "launch": "manual_only", "offline": not module.remote,
             "workstation_only": module.workstation_only,
         })

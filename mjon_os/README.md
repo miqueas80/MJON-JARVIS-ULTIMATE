@@ -20,13 +20,25 @@ A Linux distribution is a complete OS; native session services and desktop proto
 
 ## Centro de mando gráfico de MJON AI OS
 
-La distribución incorpora la **aplicación real de KDE System Settings** (no una maqueta), accesible mediante el icono "MJON AI OS - Centro de mando" en el escritorio y el menú de aplicaciones. La bandeja del panel incluye ajustes rápidos de Wi-Fi, volumen y Bluetooth.
+La distribución incorpora un **Centro de mando MJON unificado y liviano** (GTK), accesible desde el icono del escritorio y el menú de aplicaciones. La pestaña Sistema abre la **configuración real de KDE**; la pestaña Módulos IA detecta opcionales instalados sin importarlos ni iniciarlos; la pestaña IA local puede consultar un Ollama existente exclusivamente por loopback; y la pestaña Seguridad explica los límites de autorización. Si el motor nativo no está disponible, el lanzador conserva un acceso de recuperación a KDE System Settings.
+
+**No se incluyen pesos de modelos locales ni servidores de inferencia pesados en el perfil básico.** Se informa claramente cuando Ollama no está instalado, no responde o no tiene ningún modelo. La política de hardware favorece motores CPU ligeros y evita activar frameworks pesados o proveedores remotos sin consentimiento. La bandeja del panel mantiene los controles de Wi-Fi, volumen y Bluetooth.
 
 Los paquetes se declaran expresamente porque `live-build` desactiva las recomendaciones APT: `systemsettings`, `plasma-nm`, `wpasupplicant`, `plasma-pa`, `pipewire-audio`, `bluedevil`, `bluez`, `powerdevil`, `kscreen`, `kinfocenter`, `polkit-kde-agent-1`, `plasma-systemmonitor` y `plasma-discover`. Esto evita que aparezcan categorías vacías o que el usuario tenga que recurrir a la terminal para las tareas habituales.
 
 La construcción comprueba los binarios y las entradas de menú. El arranque virtual también exige `MJON_VM_PROOF CONTROL_CENTER_READY`; **la operación con hardware Realtek y demás dispositivos todavía debe probarse físicamente**.
 
 **En modo Live sin persistencia, las aplicaciones que se instalen con Discover y los ajustes de usuario pueden perderse al reiniciar.** En ningún caso se instala automáticamente sobre el disco de Windows.
+
+## Plano de control de módulos (implementación inicial)
+
+- `mjon_os.ai_fabric`: catálogo de capacidades y política conservadora de RAM/CPU/GPU, sin auto-instalar ni auto-ejecutar agentes.
+- `mjon_os.local_inference`: prueba real de Ollama vía `http://127.0.0.1:11434`, con detección de pesos antes de enviar una pregunta. No habilita nube automáticamente.
+- `mjon_os.ai_center`: Centro de mando GTK unificado y diagnóstico sin GUI `python3 -m mjon_os.ai_center --status-json`.
+- `systemd-zram-generator`: swap comprimida de tamaño `min(ram/4, 2048 MiB)`, no RAM física adicional; utilidad para entornos de 8 GiB.
+- `AppArmor` y `Bubblewrap` en la base. **No es evidencia de aislamiento de agentes** hasta que se creen y prueben perfiles concretos.
+- Free LLM API, OpenClaw, OpenCode, vLLM, SGLang, frameworks de entrenamiento, visión y voz avanzada siguen como módulos optativos. El catálogo no demuestra que estén instalados o funcionales.
+- Integración completa del plano de control dentro de cada conversación de JARVIS, instalación gráfica segura de componentes, persistencia USB y pruebas físicas offline con un modelo siguen pendientes.
 
 ## Validated locally
 

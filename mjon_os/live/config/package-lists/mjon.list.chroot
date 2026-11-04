@@ -35,6 +35,8 @@ plasma-nm
 # These are only recommends of plasma-desktop, but our ISO disables recommends.
 systemsettings
 plasma-pa
+# Audio service and session manager, not just the volume icon.
+pipewire-audio
 bluedevil
 bluez
 powerdevil

@@ -39,6 +39,10 @@ class LiveImageTests(unittest.TestCase):
             archive.writestr('mjon_jarvis/spanish_bridge.py', '# MJON')
             archive.writestr('mjon_os/config_paths.py', '# MJON')
             archive.writestr('dodaios/ui/web/dist/index.html', '<!doctype html><title>MJON</title>')
+            for module in ('__init__', 'base', 'chat_tails', 'commands',
+                           'meetings', 'progression', 'roster', 'screens', 'settings'):
+                archive.writestr(f'dodaios/verse_host/relays/{module}.py',
+                                 '# Test fixture: replace with real source in production')
 
     def test_wheel_metadata_must_name_dodaios(self) -> None:
         self.assertEqual(validate_wheel(self.wheel), '4.1.2')
@@ -70,6 +74,19 @@ class LiveImageTests(unittest.TestCase):
         guest_probe = (root / 'includes.chroot/usr/local/bin/mjon-vm-proof').read_text(encoding='utf-8')
         self.assertIn('pamtester login user authenticate', guest_probe)
         self.assertIn('LIVE_USER_READY', guest_probe)
+
+    def test_rejects_wheel_without_verse_host_relays(self) -> None:
+        # Regression from the actual Live USB: web UI stuck on "Starting..."
+        # because find_packages skipped an uninitialized relay directory.
+        wheel = self.base / 'missing-relays.whl'
+        with ZipFile(wheel, 'w') as archive:
+            archive.writestr('dodaios-4.1.2.dist-info/METADATA',
+                             'Metadata-Version: 2.3\\nName: dodaios\\nVersion: 4.1.2\\n')
+            archive.writestr('mjon_jarvis/spanish_bridge.py', '# MJON')
+            archive.writestr('mjon_os/config_paths.py', '# MJON')
+            archive.writestr('dodaios/ui/web/dist/index.html', '<title>MJON</title>')
+        with self.assertRaisesRegex(ValueError, 'Verse relays'):
+            validate_wheel(wheel)
 
     def test_rejects_wheel_without_built_frontend(self) -> None:
         path = self.base / 'missing-ui.whl'

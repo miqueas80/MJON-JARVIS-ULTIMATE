@@ -22,10 +22,11 @@ class USBReleaseTests(unittest.TestCase):
         uefi = root / "boot-uefi-serial.txt"
         for text in (bios, uefi):
             text.write_text(
-                "MJON_VM_EVIDENCE kernel=True userspace=True live_user=True plasma=True jarvis=True\n"
+                "MJON_VM_EVIDENCE kernel=True userspace=True live_user=True plasma=True jarvis=True api=True\n"
                 "MJON_VM_PROOF LIVE_USER_READY\n"
                 "MJON_VM_PROOF PLASMA_DESKTOP_ACTIVE\n"
                 "MJON_VM_PROOF JARVIS_SERVICE_STABLE\n"
+                "MJON_VM_PROOF JARVIS_API_READY\n"
             )
         return iso, sha, boot, bios, uefi
 
@@ -63,6 +64,15 @@ class USBReleaseTests(unittest.TestCase):
                 "MJON_VM_PROOF LIVE_USER_READY\n"
             )
             with self.assertRaisesRegex(ValueError, "desktop"):
+                check_candidate(iso, sha, boot, bios, uefi, min_bytes=1)
+
+    def test_release_refuses_running_python_without_ready_http_api(self):
+        with TemporaryDirectory() as tmp:
+            iso, sha, boot, bios, uefi = self._inputs(Path(tmp))
+            log=uefi.read_text()
+            uefi.write_text(log.replace("api=True", "api=False")
+                                .replace("MJON_VM_PROOF JARVIS_API_READY", "MJON_VM_PROOF JARVIS_API_NOT_READY"))
+            with self.assertRaisesRegex(ValueError, "API"):
                 check_candidate(iso, sha, boot, bios, uefi, min_bytes=1)
 
     def test_uefi_is_required(self):

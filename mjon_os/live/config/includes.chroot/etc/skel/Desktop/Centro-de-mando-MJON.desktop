@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=MJON AI OS - Centro de mando
+Name[es]=MJON AI OS - Centro de mando
+GenericName=Configuración del sistema
+GenericName[es]=Configuración del sistema
+Comment=Configurar Wi-Fi, Bluetooth, sonido, pantalla, energía y aplicaciones
+Comment[es]=Configurar Wi-Fi, Bluetooth, sonido, pantalla, energía y aplicaciones
+Exec=/usr/local/bin/mjon-control-center
+TryExec=/usr/bin/systemsettings
+Icon=preferences-system
+Terminal=false
+Categories=Settings;System;
+StartupNotify=true

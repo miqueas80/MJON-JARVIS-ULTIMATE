@@ -1,0 +1,96 @@
+# ISO original downloaded by the owner from Microsoft, NOT checked into GitHub.
+# Full Windows installation ISO is never published as a public workflow artifact.
+name: MJON Windows 11 ISO builder gates
+
+on:
+  push:
+    branches: [feature/mjon-windows-migration]
+    paths:
+      - 'mjon_windows/media_policy.py'
+      - 'mjon_windows/tests/test_media_policy.py'
+      - 'packaging/windows/build-mjon-win11-media.ps1'
+      - '.github/workflows/mjon-windows-iso-builder.yml'
+  workflow_dispatch:
+    inputs:
+      build_preview_iso:
+        description: 'Run preview ISO build on a manually configured 35GB+ Windows runner?'
+        type: boolean
+        default: false
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate-source:
+    name: Validate ISO builder source without Microsoft media
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          lfs: false
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Validate disk-policy and media fixtures
+        run: python -m unittest mjon_windows.tests.test_media_policy -v
+      - name: Parse PowerShell builder without executing or downloading Windows
+        shell: pwsh
+        run: |
+          $dollar = [ref]$null
+          $errors = @()
+          $code = Join-Path $PWD 'packaging\windows\build-mjon-win11-media.ps1'
+          [System.Management.Automation.Language.Parser]::ParseFile($code, $dollar, [ref]$errors) | Out-Null
+          if ($errors.Count -ne 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            throw 'The Windows ISO builder is invalid PowerShell'
+          }
+          Write-Output 'WINDOWS_MEDIA_BUILDER_SYNTAX_OK'
+      - name: Missing official Windows media must fail safely
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          & pwsh -NoProfile -File packaging/windows/build-mjon-win11-media.ps1 -WindowsIso 'Z:\missing-official.iso' -ExpectedWindowsSha256 ('0' * 64) -PayloadDirectory '.' -OutputIso "$env:RUNNER_TEMP\not-created.iso" -PreflightOnly 2>&1 | Out-Null
+          if ($LASTEXITCODE -eq 0) { throw 'Missing source ISO was wrongly accepted' }
+          if (Test-Path "$env:RUNNER_TEMP\not-created.iso") { throw 'Builder created output after preflight failure' }
+          Write-Output 'MISSING_WINDOWS_ISO_REJECTED'
+
+  integration-preview:
+    name: Recompose only on owner's private Windows runner
+    needs: validate-source
+    if: github.event_name == 'workflow_dispatch' && inputs.build_preview_iso && vars.MJON_BUILDER_READY == 'true'
+    runs-on: [self-hosted, windows, x64, mjon-iso-builder]
+    timeout-minutes: 120
+    env:
+      SOURCE_ISO_PATH: ${{ secrets.MJON_WINDOWS_ISO_PATH }}
+      SOURCE_ISO_SHA256: ${{ secrets.MJON_WINDOWS_ISO_SHA256 }}
+      MJON_PAYLOAD_PATH: ${{ vars.MJON_PAYLOAD_PATH }}
+      MJON_OUTPUT_PATH: ${{ vars.MJON_OUTPUT_PATH }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          lfs: false
+          persist-credentials: false
+      - name: Assert source, SHA256, output and MJON payload were configured
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:SOURCE_ISO_PATH) -or
+              [string]::IsNullOrWhiteSpace($env:SOURCE_ISO_SHA256) -or
+              [string]::IsNullOrWhiteSpace($env:MJON_PAYLOAD_PATH) -or
+              [string]::IsNullOrWhiteSpace($env:MJON_OUTPUT_PATH)) {
+            throw 'Configure ISO path/hash in secrets and output/payload paths in variables.'
+          }
+      - name: Verify official ISO, Microsoft signature and free space
+        shell: pwsh
+        run: |
+          & pwsh -NoProfile -File packaging/windows/build-mjon-win11-media.ps1 -WindowsIso $env:SOURCE_ISO_PATH -ExpectedWindowsSha256 $env:SOURCE_ISO_SHA256 -PayloadDirectory $env:MJON_PAYLOAD_PATH -OutputIso $env:MJON_OUTPUT_PATH -PreflightOnly
+          if ($LASTEXITCODE -ne 0) { throw 'Preflight failed' }
+      - name: Generate preview bootable ISO locally, not publicly
+        shell: pwsh
+        run: |
+          & pwsh -NoProfile -File packaging/windows/build-mjon-win11-media.ps1 -WindowsIso $env:SOURCE_ISO_PATH -ExpectedWindowsSha256 $env:SOURCE_ISO_SHA256 -PayloadDirectory $env:MJON_PAYLOAD_PATH -OutputIso $env:MJON_OUTPUT_PATH
+          if ($LASTEXITCODE -ne 0) { throw 'Bootable preview ISO build failed' }
+          if (-not (Test-Path -LiteralPath $env:MJON_OUTPUT_PATH)) { throw 'ISO was not produced' }
+          Write-Output 'ISO built on owned runner. Boot test and GUI integration remain pending.'

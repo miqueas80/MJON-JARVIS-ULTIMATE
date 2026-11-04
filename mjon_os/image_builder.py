@@ -22,6 +22,9 @@ _RESOURCE_ROOT = Path(__file__).resolve().parent / 'live'
 _REQUIRED_WHEEL_FILES = frozenset({
     'mjon_jarvis/spanish_bridge.py',
     'mjon_os/config_paths.py',
+    'mjon_os/ai_fabric.py',
+    'mjon_os/ai_center.py',
+    'mjon_os/local_inference.py',
     'dodaios/ui/web/dist/index.html',
     'dodaios/verse_host/relays/__init__.py',
     'dodaios/verse_host/relays/base.py',

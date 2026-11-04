@@ -124,11 +124,13 @@ async def models() -> dict:
     except (RuntimeError, ValueError, OSError) as exc:
         return {
             "ready": False, "server_reachable": False,
-            "generation_tested": False, "models": [], "reason": str(exc),
+            "generation_tested": False, "models_available": False,
+            "models": [], "reason": str(exc),
         }
     return {
-        "ready": bool(names), "server_reachable": True,
-        "generation_tested": False, "models": list(names),
+        "ready": False, "server_reachable": True,
+        "generation_tested": False, "models_available": bool(names),
+        "models": list(names),
         "reason": ("Modelos descargados; la inferencia aún no se probó."
                    if names else "Ollama responde, pero no tiene modelos descargados."),
     }

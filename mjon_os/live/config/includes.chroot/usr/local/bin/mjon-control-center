@@ -4,7 +4,10 @@
 set -eu
 engine=/opt/mjon-ai-os/venv/bin/python
 if [ -x "$engine" ]; then
-  exec "$engine" -m mjon_os.ai_center "$@"
+  # The graphical hub can fail on hardware without GTK/WebKit support.
+  # Never strand the user: retain KDE Settings as a real recovery fallback.
+  if "$engine" -m mjon_os.ai_center "$@"; then
+    exit 0
+  fi
 fi
-# Safe recovery path if the OS-owned engine has not yet been provisioned.
 exec /usr/bin/systemsettings "$@"

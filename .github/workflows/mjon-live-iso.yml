@@ -139,6 +139,8 @@ jobs:
           grep -Fq 'MJON_VM_PROOF PLASMA_DESKTOP_ACTIVE' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
           grep -Fq 'MJON_VM_PROOF JARVIS_SERVICE_STABLE' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
           grep -Fq 'MJON_VM_PROOF JARVIS_SERVICE_STABLE' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
+          grep -Fq 'MJON_VM_PROOF JARVIS_API_READY' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
+          grep -Fq 'MJON_VM_PROOF JARVIS_API_READY' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
       - name: Upload experimental ISO for virtual-machine testing (not release)
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

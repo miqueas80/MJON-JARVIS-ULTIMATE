@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -119,10 +120,13 @@ class LiveImageTests(unittest.TestCase):
         # refuses to trust a non-executable desktop shortcut on initial login.
         control_desktop = work / 'config/includes.chroot/etc/skel/Desktop/Centro-de-mando-MJON.desktop'
         self.assertTrue(control_desktop.is_file())
-        self.assertNotEqual(control_desktop.stat().st_mode & 0o111, 0)
         control_launcher = work / 'config/includes.chroot/usr/local/bin/mjon-control-center'
         self.assertTrue(control_launcher.is_file())
-        self.assertNotEqual(control_launcher.stat().st_mode & 0o111, 0)
+        # Windows NTFS/Python do not expose Linux executable mode bits.
+        # Verify permissions on the POSIX builder that actually creates the ISO.
+        if os.name == 'posix':
+            self.assertNotEqual(control_desktop.stat().st_mode & 0o111, 0)
+            self.assertNotEqual(control_launcher.stat().st_mode & 0o111, 0)
         self.assertTrue((work / 'config/includes.chroot/usr/local/bin/mjon-vm-proof').is_file())
         service = (work / 'config/includes.chroot/usr/lib/systemd/system/mjon-vm-proof.service').read_text()
         self.assertIn('ConditionVirtualization=vm', service)

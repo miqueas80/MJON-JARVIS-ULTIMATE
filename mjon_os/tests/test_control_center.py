@@ -29,7 +29,7 @@ class ControlCenterTests(unittest.TestCase):
             "systemsettings", "plasma-nm", "wpasupplicant", "rfkill",
             "plasma-pa", "bluedevil", "bluez", "powerdevil",
             "kscreen", "kinfocenter", "polkit-kde-agent-1",
-            "plasma-systemmonitor", "plasma-discover",
+            "plasma-systemmonitor", "plasma-discover", "pipewire-audio",
         }
         self.assertEqual(expected - included, set(), "KDE Control Center panels cannot be used")
 

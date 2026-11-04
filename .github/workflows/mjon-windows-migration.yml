@@ -5,6 +5,7 @@ on:
     branches: [feature/mjon-windows-migration]
     paths:
       - 'mjon_windows/**'
+      - 'dodaios/ui/web/server.py'
       - 'mjon_os/ai_fabric.py'
       - 'mjon_os/local_inference.py'
       - 'mjon_jarvis/**'
@@ -13,6 +14,7 @@ on:
   pull_request:
     paths:
       - 'mjon_windows/**'
+      - 'dodaios/ui/web/server.py'
       - 'mjon_os/ai_fabric.py'
       - 'mjon_os/local_inference.py'
       - 'mjon_jarvis/**'

@@ -48,6 +48,30 @@ class OllamaClientTests(unittest.TestCase):
         self.assertEqual(data["messages"][0]["role"], "user")
         self.assertLessEqual(data["options"]["num_predict"], 256)
 
+    def test_eight_gigabytes_chooses_smallest_existing_model(self):
+        def responder(request, **kw):
+            if request.full_url.endswith("/api/tags"):
+                return FakeHTTPResponse({"models": [
+                    {"name": "huge", "size": 12*1024**3},
+                    {"name": "small", "size": 700*1024**2},
+                ]})
+            sent = json.loads(request.data)
+            self.assertEqual(sent["model"], "small")
+            return FakeHTTPResponse({"message": {"content": "Modelo chico"} })
+        client = OllamaClient(opener=responder, ram_bytes=8*1024**3)
+        self.assertEqual(client.ask("hola"), "Modelo chico")
+
+    def test_eight_gigabytes_rejects_an_oversized_ollama_model(self):
+        def responder(request, **kw):
+            if request.full_url.endswith("/api/tags"):
+                return FakeHTTPResponse({"models": [
+                    {"name": "oversized", "size": 11*1024**3},
+                ]})
+            self.fail("No se debe iniciar inferencia con un modelo demasiado grande")
+        client = OllamaClient(opener=responder, ram_bytes=8*1024**3)
+        with self.assertRaisesRegex(InferenceUnavailable, "memoria"):
+            client.ask("hola", model="oversized")
+
     def test_refuses_unbounded_input_or_remote_endpoints(self):
         with self.assertRaises(ValueError):
             OllamaClient(endpoint="http://8.8.8.8:11434")

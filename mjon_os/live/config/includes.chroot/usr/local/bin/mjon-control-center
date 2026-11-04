@@ -1,5 +1,10 @@
 #!/bin/sh
-# MJON AI OS Control Center is KDE System Settings, not a mock interface.
-# Run as the signed-in user; KDE polkit asks for confirmation when needed.
+# Unified MJON AI OS Control Center: real KDE settings + native AI control plane.
+# No root shell, no background downloads. GTK is started only on user request.
 set -eu
+engine=/opt/mjon-ai-os/venv/bin/python
+if [ -x "$engine" ]; then
+  exec "$engine" -m mjon_os.ai_center "$@"
+fi
+# Safe recovery path if the OS-owned engine has not yet been provisioned.
 exec /usr/bin/systemsettings "$@"

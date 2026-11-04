@@ -31,6 +31,19 @@ wpasupplicant
 wireless-regdb
 rfkill
 plasma-nm
+# Full graphical Control Center, just like Settings on Windows.
+# These are only recommends of plasma-desktop, but our ISO disables recommends.
+systemsettings
+plasma-pa
+bluedevil
+bluez
+powerdevil
+kscreen
+kinfocenter
+polkit-kde-agent-1
+plasma-systemmonitor
+# Graphical software installer: changes in Live mode are temporary.
+plasma-discover
 # Portable laptop Wi-Fi and audio firmware (may contain redistributable binary firmware).
 # Necessary on some Intel/Realtek/Atheros school laptops; does not imply driver coverage for every model.
 firmware-iwlwifi

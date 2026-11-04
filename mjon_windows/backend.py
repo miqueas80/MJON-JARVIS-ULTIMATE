@@ -224,6 +224,28 @@ def model_directory(
     return (home or Path.home()) / "AppData" / "Local" / "MJON AI OS" / "models"
 
 
+
+def ollama_model_directory(
+    *, env: Mapping[str, str] | None = None, home: Path | None = None,
+) -> Path | PureWindowsPath:
+    """Resolve Ollama's actual model volume, not the MJON-owned GGUF directory.
+
+    Ollama uses OLLAMA_MODELS when configured and otherwise stores user
+    models under %USERPROFILE%\\.ollama\\models on Windows. Observational
+    only: no paths are created and UNC/relative overrides are refused.
+    """
+    variables = os.environ if env is None else env
+    explicit = variables.get("OLLAMA_MODELS", "").strip()
+    profile = variables.get("USERPROFILE", "").strip()
+    root = explicit or profile
+    if root:
+        path = PureWindowsPath(root)
+        if not path.is_absolute() or root.startswith("\\\\") or ".." in path.parts:
+            raise ValueError("Ruta de modelos Ollama inválida; debe ser local y absoluta.")
+        return path if explicit else path / ".ollama" / "models"
+    return (home or Path.home()) / ".ollama" / "models"
+
+
 def diagnose_windows(
     *,
     os_name: str | None = None,

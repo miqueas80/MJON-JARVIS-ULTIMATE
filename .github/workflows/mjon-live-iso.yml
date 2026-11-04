@@ -142,6 +142,9 @@ jobs:
           # exists. Never mark ISO boot verified without account and password.
           grep -Fq 'MJON_VM_PROOF LIVE_USER_READY' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
           grep -Fq 'MJON_VM_PROOF LIVE_USER_READY' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
+          # Genuine Windows-style graphical Control Center in both guest boots.
+          grep -Fq 'MJON_VM_PROOF CONTROL_CENTER_READY' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
+          grep -Fq 'MJON_VM_PROOF CONTROL_CENTER_READY' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
           grep -Fq 'MJON_VM_PROOF PLASMA_DESKTOP_ACTIVE' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
           grep -Fq 'MJON_VM_PROOF PLASMA_DESKTOP_ACTIVE' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
           grep -Fq 'MJON_VM_PROOF JARVIS_SERVICE_STABLE' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"

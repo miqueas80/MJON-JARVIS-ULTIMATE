@@ -44,6 +44,10 @@ def check_candidate(iso: Path, checksum: Path, boot_records: Path,
         if ("MJON_VM_EVIDENCE kernel=True userspace=True live_user=True" not in log
                 or "MJON_VM_PROOF LIVE_USER_READY" not in log):
             raise ValueError(f"Missing {label} VM Live user account and password proof")
+        if ("plasma=True jarvis=True" not in log
+                or "MJON_VM_PROOF PLASMA_DESKTOP_ACTIVE" not in log
+                or "MJON_VM_PROOF JARVIS_SERVICE_STABLE" not in log):
+            raise ValueError(f"Missing {label} VM KDE desktop or stable JARVIS service proof")
     return True
 
 

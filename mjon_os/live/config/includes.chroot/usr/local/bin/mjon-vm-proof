@@ -1,20 +1,66 @@
 #!/bin/sh
-# Virtual machine only: send deterministic guest proof to an isolated serial port.
-# No network access, no modification of host partitions or guest user state.
+# VM-only guest checks. No network, host disk access or account modifications.
 set -eu
 [ -c /dev/ttyS0 ] || exit 0
-printf 'MJON_VM_PROOF KERNEL_RUNNING\n' > /dev/ttyS0
+emit() { printf 'MJON_VM_PROOF %s\n' "$1" > /dev/ttyS0; }
+emit KERNEL_RUNNING
 if systemctl is-active --quiet display-manager.service; then
-  printf 'MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE\n' > /dev/ttyS0
+  emit DISPLAY_MANAGER_ACTIVE
 fi
-# A visible greeter is NOT proof that a real live account exists. An earlier
-# image passed the graphical checks but failed to authenticate on real hardware.
-# Fail closed unless live-config created the user, home and usable password.
+
+# A visible KDE greeter is NOT evidence of a working live user (hardware
+# regression: first ISO had an inaccessible account).
 if id user >/dev/null 2>&1 && [ -d /home/user ] && \
    [ "$(passwd -S user 2>/dev/null | awk '{print $2}')" = "P" ]; then
-  # Test actual Debian Live default credentials through PAM. No account
-  # changes are performed, and credentials are never written to the log.
   if printf '%s\n' 'live' | timeout 10 pamtester login user authenticate >/dev/null 2>&1; then
-    printf 'MJON_VM_PROOF LIVE_USER_READY\n' > /dev/ttyS0
+    emit LIVE_USER_READY
+  else
+    emit LIVE_USER_AUTH_FAILED
+    exit 1
   fi
+else
+  emit LIVE_USER_MISSING
+  exit 1
 fi
+
+# SDDM autologin and KDE Plasma can take longer than the login greeter itself.
+# Confirm a real Plasma session process before claiming a working desktop.
+uid="$(id -u user)"
+i=0
+while [ "$i" -lt 120 ]; do
+  if pgrep -u user -x plasmashell >/dev/null 2>&1; then
+    emit PLASMA_DESKTOP_ACTIVE
+    break
+  fi
+  i=$((i+1))
+  sleep 1
+done
+if ! pgrep -u user -x plasmashell >/dev/null 2>&1; then
+  emit PLASMA_DESKTOP_MISSING
+  exit 1
+fi
+
+# The OS-owned JARVIS process must remain alive after KDE has started.
+# Query only the logged-in user's user service; do not grant root to JARVIS.
+service_active() {
+  [ -S "/run/user/$uid/bus" ] || return 1
+  runuser -u user -- env \
+    XDG_RUNTIME_DIR="/run/user/$uid" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" \
+    systemctl --user is-active --quiet mjon-jarvis.service || return 1
+  pgrep -u user -f 'dodaios.ui.web.launcher' >/dev/null 2>&1
+}
+i=0
+while [ "$i" -lt 120 ]; do
+  if service_active; then
+    sleep 5
+    if service_active; then
+      emit JARVIS_SERVICE_STABLE
+      exit 0
+    fi
+  fi
+  i=$((i+1))
+  sleep 1
+done
+emit JARVIS_SERVICE_NOT_READY
+exit 1

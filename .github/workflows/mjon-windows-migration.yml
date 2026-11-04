@@ -6,6 +6,7 @@ on:
     paths:
       - 'mjon_windows/**'
       - 'dodaios/ui/web/server.py'
+      - 'dodaios/ui/web/frontend/src/lib/mjonWindowsBridge*.ts'
       - 'mjon_os/ai_fabric.py'
       - 'mjon_os/local_inference.py'
       - 'mjon_jarvis/**'
@@ -15,6 +16,7 @@ on:
     paths:
       - 'mjon_windows/**'
       - 'dodaios/ui/web/server.py'
+      - 'dodaios/ui/web/frontend/src/lib/mjonWindowsBridge*.ts'
       - 'mjon_os/ai_fabric.py'
       - 'mjon_os/local_inference.py'
       - 'mjon_jarvis/**'
@@ -55,3 +57,14 @@ jobs:
       - name: Probe actual Windows RAM and disk without privileged changes
         if: runner.os == 'Windows'
         run: python -c "from mjon_windows.backend import diagnose_windows; d=diagnose_windows(); print(d); assert d['platform'] == 'Windows'; assert isinstance(d['memory_total_bytes'], int) and d['memory_total_bytes'] > 0; assert isinstance(d['disk_free_bytes'], int) and d['disk_free_bytes'] > 0"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: dodaios/ui/web/frontend/package-lock.json
+      - name: Install UI control bridge test dependencies
+        working-directory: dodaios/ui/web/frontend
+        run: npm ci
+      - name: Test typed Windows control bridge without changing UI
+        working-directory: dodaios/ui/web/frontend
+        run: npx vitest run src/lib/mjonWindowsBridge.test.ts

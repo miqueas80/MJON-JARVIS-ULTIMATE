@@ -23,6 +23,14 @@ konsole
 firefox-esr
 locales
 network-manager
+# Required by NetworkManager for WPA/WPA2/WPA3 on Debian. We explicitly
+# disable apt recommends, so these do not get included automatically.
+# First real USB test on Realtek RTL8822CE showed wlp1s0 unavailable despite
+# loaded rtw_8822ce firmware and enabled Wi-Fi hardware radio.
+wpasupplicant
+wireless-regdb
+rfkill
+plasma-nm
 # Portable laptop Wi-Fi and audio firmware (may contain redistributable binary firmware).
 # Necessary on some Intel/Realtek/Atheros school laptops; does not imply driver coverage for every model.
 firmware-iwlwifi

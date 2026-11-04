@@ -46,6 +46,16 @@ La CI `.github/workflows/mjon-windows-migration.yml` verifica en Windows y Linux
 
 Estas pruebas no equivalen a una prueba funcional con un modelo descargado real; para declarar **IA local lista** se exige también una generación comprobada con peso cuantizado en una máquina Windows de destino.
 
+## Ensayo real de inferencia Windows (2026-11-04)
+
+GitHub Actions `41912645480` finalizó con éxito: descarga del archivo oficial Ollama Windows `v0.40.14`, checksum SHA256 comprobado, servicio local `127.0.0.1:11434`, descarga del modelo `smollm2:135m` y generación de 124 caracteres mediante `mjon_windows.backend.local_chat`.
+
+El primer intento `41912382146` falló: el proceso Ollama lanzado en un paso del runner Windows ya no escuchaba al entrar al paso siguiente. Se corrigió ejecutando arranque, descarga y generación en el mismo paso; el segundo intento aprobó.
+
+**Alcance de evidencia:** Windows Server 2025 de GitHub Actions, ~16 GiB de RAM; modelo pequeño real e inferencia por loopback. No es una validación en Windows 11 físico de 8 GiB, ni una prueba con el adaptador Wi-Fi deshabilitado, ni una garantía de calidad de respuestas o latencia.
+
+**Almacenamiento:** el control de espacio para Ollama sigue `OLLAMA_MODELS` cuando está configurado y, en caso contrario, la carpeta de modelos bajo `USERPROFILE`. No depende de un número de espacio libre proporcionado por la pantalla.
+
 ## Próximas puertas
 
 1. Prueba real Ollama/llama.cpp con un modelo pequeño en Windows 11, con latencia/RAM y cancelación.

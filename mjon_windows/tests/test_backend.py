@@ -8,7 +8,7 @@ from unittest.mock import Mock
 
 from mjon_windows.backend import (
     inspect_windows_catalog, plan_windows_capability, windows_settings,
-    storage_budget, model_directory, diagnose_windows, local_chat,
+    storage_budget, model_directory, ollama_model_directory, diagnose_windows, local_chat,
 )
 
 
@@ -79,6 +79,19 @@ class WindowsControlTests(unittest.TestCase):
         self.assertEqual(str(path), "C:\\Users\\demo\\AppData\\Local\\MJON AI OS\\models")
         self.assertTrue(isinstance(path, Path) or hasattr(path, "parts"))
         self.assertEqual(model_directory(env={}).name, "models")
+
+    def test_ollama_model_storage_uses_actual_configured_volume(self):
+        self.assertEqual(
+            str(ollama_model_directory(env={"OLLAMA_MODELS": "D:\\\\IA\\\\Ollama",
+                                            "USERPROFILE": "C:\\\\Users\\\\demo"})),
+            "D:\\\\IA\\\\Ollama",
+        )
+        self.assertEqual(
+            str(ollama_model_directory(env={"USERPROFILE": "C:\\\\Users\\\\demo"})),
+            "C:\\\\Users\\\\demo\\\\.ollama\\\\models",
+        )
+        with self.assertRaises(ValueError):
+            ollama_model_directory(env={"OLLAMA_MODELS": "..\\\\..\\\\temp"})
 
     def test_windows_doctor_does_not_call_linux_service_or_external_network(self):
         def status_reader(**kwargs):

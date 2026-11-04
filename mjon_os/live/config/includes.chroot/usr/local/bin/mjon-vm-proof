@@ -56,7 +56,21 @@ while [ "$i" -lt 120 ]; do
     sleep 5
     if service_active; then
       emit JARVIS_SERVICE_STABLE
-      exit 0
+      # A running Python process alone is not an operational assistant.
+      # The native desktop must also respond on its loopback health endpoint.
+      # Never attempt an external network request from the isolated VM.
+      j=0
+      while [ "$j" -lt 80 ]; do
+        if curl -fsS --noproxy '*' --max-time 2 \
+            http://127.0.0.1:47821/api/health >/dev/null 2>&1; then
+          emit JARVIS_API_READY
+          exit 0
+        fi
+        j=$((j+1))
+        sleep 1
+      done
+      emit JARVIS_API_NOT_READY
+      exit 1
     fi
   fi
   i=$((i+1))

@@ -48,6 +48,9 @@ def check_candidate(iso: Path, checksum: Path, boot_records: Path,
                 or "MJON_VM_PROOF PLASMA_DESKTOP_ACTIVE" not in log
                 or "MJON_VM_PROOF JARVIS_SERVICE_STABLE" not in log):
             raise ValueError(f"Missing {label} VM KDE desktop or stable JARVIS service proof")
+        if ("jarvis=True api=True" not in log
+                or "MJON_VM_PROOF JARVIS_API_READY" not in log):
+            raise ValueError(f"Missing {label} VM native JARVIS HTTP API health proof")
     return True
 
 

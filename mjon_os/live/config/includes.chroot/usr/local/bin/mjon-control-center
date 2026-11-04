@@ -1,0 +1,5 @@
+#!/bin/sh
+# MJON AI OS Control Center is KDE System Settings, not a mock interface.
+# Run as the signed-in user; KDE polkit asks for confirmation when needed.
+set -eu
+exec /usr/bin/systemsettings "$@"

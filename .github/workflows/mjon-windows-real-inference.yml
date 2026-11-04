@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   cpu-real-generation:
-    name: Real Ollama + tiny offline model on Windows CPU
+    name: Real Ollama + tiny local model on Windows CPU
     runs-on: windows-latest
     timeout-minutes: 35
     steps:
@@ -43,7 +43,7 @@ jobs:
           "OLLAMA_MODELS=$($env:RUNNER_TEMP)\mjon-models" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "OLLAMA_HOST=127.0.0.1:11434" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Output 'Pinned Ollama standalone extracted and checksum verified'
-      - name: Start local-only Ollama server and download tiny model
+      - name: Start Ollama, download weights, and prove real local generation
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -64,10 +64,9 @@ jobs:
           & $bin pull 'smollm2:135m'
           if ($LASTEXITCODE -ne 0) { throw "Failed to pull local model" }
           Write-Output 'Ollama is running and tiny local model weights are present'
-      - name: Prove a REAL offline generation through MJON client
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
+          # Keep Ollama and the real generation in the SAME Actions step.
+          # The Windows hosted runner can terminate spawned child processes
+          # at step boundaries even when the previous step successfully pulled.
           $env:OLLAMA_HOST='127.0.0.1:11434'
           @'
           from mjon_jarvis.system_status import read_status

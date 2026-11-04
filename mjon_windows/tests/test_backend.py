@@ -82,16 +82,16 @@ class WindowsControlTests(unittest.TestCase):
 
     def test_ollama_model_storage_uses_actual_configured_volume(self):
         self.assertEqual(
-            str(ollama_model_directory(env={"OLLAMA_MODELS": "D:\\\\IA\\\\Ollama",
-                                            "USERPROFILE": "C:\\\\Users\\\\demo"})),
-            "D:\\\\IA\\\\Ollama",
+            str(ollama_model_directory(env={"OLLAMA_MODELS": "D:\\IA\\Ollama",
+                                            "USERPROFILE": "C:\\Users\\demo"})),
+            "D:\\IA\\Ollama",
         )
         self.assertEqual(
-            str(ollama_model_directory(env={"USERPROFILE": "C:\\\\Users\\\\demo"})),
-            "C:\\\\Users\\\\demo\\\\.ollama\\\\models",
+            str(ollama_model_directory(env={"USERPROFILE": "C:\\Users\\demo"})),
+            "C:\\Users\\demo\\.ollama\\models",
         )
         with self.assertRaises(ValueError):
-            ollama_model_directory(env={"OLLAMA_MODELS": "..\\\\..\\\\temp"})
+            ollama_model_directory(env={"OLLAMA_MODELS": "..\\..\\temp"})
 
     def test_windows_doctor_does_not_call_linux_service_or_external_network(self):
         def status_reader(**kwargs):

@@ -48,3 +48,6 @@ jobs:
         run: python -m unittest discover -s mjon_jarvis/smoke -p "test_*.py" -v
       - name: Verify CLI catalog without installing engines
         run: python -m mjon_windows --catalog
+      - name: Probe actual Windows RAM and disk without privileged changes
+        if: runner.os == 'Windows'
+        run: python -c "from mjon_windows.backend import diagnose_windows; d=diagnose_windows(); print(d); assert d['platform'] == 'Windows'; assert isinstance(d['memory_total_bytes'], int) and d['memory_total_bytes'] > 0; assert isinstance(d['disk_free_bytes'], int) and d['disk_free_bytes'] > 0"

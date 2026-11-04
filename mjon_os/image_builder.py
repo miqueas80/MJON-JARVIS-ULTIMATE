@@ -23,6 +23,15 @@ _REQUIRED_WHEEL_FILES = frozenset({
     'mjon_jarvis/spanish_bridge.py',
     'mjon_os/config_paths.py',
     'dodaios/ui/web/dist/index.html',
+    'dodaios/verse_host/relays/__init__.py',
+    'dodaios/verse_host/relays/base.py',
+    'dodaios/verse_host/relays/chat_tails.py',
+    'dodaios/verse_host/relays/commands.py',
+    'dodaios/verse_host/relays/meetings.py',
+    'dodaios/verse_host/relays/progression.py',
+    'dodaios/verse_host/relays/roster.py',
+    'dodaios/verse_host/relays/screens.py',
+    'dodaios/verse_host/relays/settings.py',
 })
 _AUTO_CONFIG = '''#!/bin/sh
 set -eu
@@ -63,6 +72,8 @@ def validate_wheel(path: Path) -> str:
             if missing:
                 if 'dodaios/ui/web/dist/index.html' in missing:
                     raise ValueError('Wheel lacks the built desktop frontend')
+                if any(name.startswith('dodaios/verse_host/relays/') for name in missing):
+                    raise ValueError('Wheel lacks Verse relays needed by the desktop: ' + ', '.join(sorted(missing)))
                 raise ValueError('Wheel lacks native MJON modules: ' + ', '.join(sorted(missing)))
             return version
     except (BadZipFile, UnicodeError, OSError) as exc:

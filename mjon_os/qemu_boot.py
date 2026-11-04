@@ -27,6 +27,7 @@ class BootEvidence:
     live_user: bool
     plasma: bool
     jarvis: bool
+    api: bool
     excerpt: str
 
 
@@ -43,6 +44,7 @@ def analyze_serial_log(log: str) -> BootEvidence:
         'MJON_VM_PROOF LIVE_USER_READY' in log,
         'MJON_VM_PROOF PLASMA_DESKTOP_ACTIVE' in log,
         'MJON_VM_PROOF JARVIS_SERVICE_STABLE' in log,
+        'MJON_VM_PROOF JARVIS_API_READY' in log,
         excerpt,
     )
 
@@ -129,7 +131,8 @@ def _collect_until_graphical_ready(process: subprocess.Popen, timeout_seconds: i
                     and b"MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE" in observed
                     and b"MJON_VM_PROOF LIVE_USER_READY" in observed
                     and b"MJON_VM_PROOF PLASMA_DESKTOP_ACTIVE" in observed
-                    and b"MJON_VM_PROOF JARVIS_SERVICE_STABLE" in observed):
+                    and b"MJON_VM_PROOF JARVIS_SERVICE_STABLE" in observed
+                    and b"MJON_VM_PROOF JARVIS_API_READY" in observed):
                 break
     finally:
         selector.close()
@@ -178,12 +181,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     evidence = boot_probe(args.iso, firmware=args.uefi_firmware, timeout_seconds=args.timeout)
     args.log.write_text(
-        f"MJON_VM_EVIDENCE kernel={evidence.kernel} userspace={evidence.userspace} live_user={evidence.live_user} plasma={evidence.plasma} jarvis={evidence.jarvis}\n"
+        f"MJON_VM_EVIDENCE kernel={evidence.kernel} userspace={evidence.userspace} live_user={evidence.live_user} plasma={evidence.plasma} jarvis={evidence.jarvis} api={evidence.api}\n"
         + evidence.excerpt + "\n", encoding="utf-8",
     )
     label = "UEFI" if args.uefi_firmware is not None else "BIOS"
-    print(f"{label} boot evidence: kernel={evidence.kernel}, userspace={evidence.userspace}, live_user={evidence.live_user}, plasma={evidence.plasma}, jarvis={evidence.jarvis}")
-    if not all((evidence.kernel, evidence.userspace, evidence.live_user, evidence.plasma, evidence.jarvis)):
+    print(f"{label} boot evidence: kernel={evidence.kernel}, userspace={evidence.userspace}, live_user={evidence.live_user}, plasma={evidence.plasma}, jarvis={evidence.jarvis}, api={evidence.api}")
+    if not all((evidence.kernel, evidence.userspace, evidence.live_user, evidence.plasma, evidence.jarvis, evidence.api)):
         print(evidence.excerpt, file=sys.stderr)
         return 1
     return 0

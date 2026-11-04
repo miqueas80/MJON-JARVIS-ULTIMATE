@@ -25,7 +25,7 @@ from mjon_jarvis.system_status import read_status
 from mjon_os.local_inference import InferenceUnavailable, OllamaClient
 from .backend import (
     diagnose_windows, inspect_windows_catalog, local_chat,
-    model_directory, storage_budget, windows_settings,
+    ollama_model_directory, storage_budget, windows_settings,
 )
 
 router = APIRouter(prefix="/api/mjon/windows", tags=["mjon-windows"])
@@ -92,7 +92,7 @@ def available_storage_bytes() -> int:
     """
     if platform.system() != "Windows":
         raise RuntimeError("El almacenamiento MJON Windows solo se comprueba en Windows.")
-    path = Path(str(model_directory()))
+    path = Path(str(ollama_model_directory()))
     while not path.exists() and path.parent != path:
         path = path.parent
     if not path.exists():

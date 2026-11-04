@@ -1,4 +1,7 @@
 # Experimental ISO builder. Runs only when this workflow changes or is explicitly dispatched.
+# Unified AI fabric v1: opt-in module catalog, local-only Ollama adapter,
+# GTK Control Center (with KDE fallback), conservative zram/AppArmor baseline,
+# and explicit ISO-chroot import checks. NO optional engines auto-installed.
 # Hardware fix: Realtek RTL8822CE loads firmware, but no Wi-Fi backend when
 # wpasupplicant is omitted because APT recommends are disabled. The package
 # list now explicitly bundles wpasupplicant, rfkill and KDE's network applet.

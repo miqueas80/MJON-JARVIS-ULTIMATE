@@ -54,6 +54,12 @@ Suite `mjon_windows/tests/test_backend.py` (Windows/Ubuntu CI):
 
 La CI también ejecuta contratos de `ai_fabric`, `local_inference` y el puente de comandos españoles. Este documento no sustituye pruebas reales en Windows 11: faltan instalar ejecutables, modelos reales, verificar memoria/latencia, probar audio, accesibilidad, AppContainer/UAC y el comportamiento de la UI aprobada.
 
+## Avance de prueba real de IA local
+
+El ensayo de Windows GitHub Actions `41912645480` aprobó una generación real de 124 caracteres con `smollm2:135m` en Ollama y conexión por loopback, con archivo de motor verificado por SHA256. El equipo de CI era Windows Server con ~16 GiB de RAM. Sigue pendiente medir latencia, calidad y estabilidad en Windows 11 físico con 8 GiB, además de una prueba totalmente desconectada de Internet.
+
+El control de espacio destinado a Ollama verifica el volumen indicado por `OLLAMA_MODELS` o la ubicación de modelos predeterminada de Ollama, en lugar de asumir que la carpeta general de MJON representa el volumen usado.
+
 ## Puertas para futuras migraciones
 
 Antes de activar otra funcionalidad, exigir prueba reproducible en Windows nativo, consumo admisible en 8 GB, licencia revisada, mecanismo de permisos y desinstalación/recuperación. Las integraciones no verificadas permanecen opt-in o pendientes; nunca se anuncian como listas.

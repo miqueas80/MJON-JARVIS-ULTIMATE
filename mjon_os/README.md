@@ -18,6 +18,16 @@
 
 A Linux distribution is a complete OS; native session services and desktop protocols provide OS integration without replacing a proven kernel. The agent is preinstalled in the ISO and starts as part of the OS experience.
 
+## Centro de mando gráfico de MJON AI OS
+
+La distribución incorpora la **aplicación real de KDE System Settings** (no una maqueta), accesible mediante el icono "MJON AI OS - Centro de mando" en el escritorio y el menú de aplicaciones. La bandeja del panel incluye ajustes rápidos de Wi-Fi, volumen y Bluetooth.
+
+Los paquetes se declaran expresamente porque `live-build` desactiva las recomendaciones APT: `systemsettings`, `plasma-nm`, `wpasupplicant`, `plasma-pa`, `pipewire-audio`, `bluedevil`, `bluez`, `powerdevil`, `kscreen`, `kinfocenter`, `polkit-kde-agent-1`, `plasma-systemmonitor` y `plasma-discover`. Esto evita que aparezcan categorías vacías o que el usuario tenga que recurrir a la terminal para las tareas habituales.
+
+La construcción comprueba los binarios y las entradas de menú. El arranque virtual también exige `MJON_VM_PROOF CONTROL_CENTER_READY`; **la operación con hardware Realtek y demás dispositivos todavía debe probarse físicamente**.
+
+**En modo Live sin persistencia, las aplicaciones que se instalen con Discover y los ajustes de usuario pueden perderse al reiniciar.** En ningún caso se instala automáticamente sobre el disco de Windows.
+
 ## Validated locally
 
 ```shell

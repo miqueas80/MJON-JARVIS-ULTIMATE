@@ -14,6 +14,9 @@ fi
 # Prefer wheels, but permit source dependencies that lack binary distributions.
 /opt/mjon-ai-os/venv/bin/python -m pip install --no-cache-dir --prefer-binary "$1[desktop]"
 /opt/mjon-ai-os/venv/bin/python -c 'import dodaios, mjon_jarvis, mjon_os, webview'
+# Check the exact missing import from the first real laptop run. A healthy
+# /api/health endpoint is not enough if the UI's Verse routes fail to import.
+/opt/mjon-ai-os/venv/bin/python -c 'from dodaios.verse_host.relays.chat_tails import ChatTailsRelay; from dodaios.verse_host.host import VerseHost; assert ChatTailsRelay and VerseHost'
 /opt/mjon-ai-os/venv/bin/python -c 'import gi; gi.require_version("Gtk", "3.0"); gi.require_version("WebKit2", "4.1"); from gi.repository import Gtk, WebKit2'
 # The whole OS ships a single native agent: verify the real action router.
 MJON_NATIVE_OS=1 /opt/mjon-ai-os/venv/bin/python -c 'from dodaios.brain.local_action_gate import match_local_action; p = match_local_action("Jarvis, abrí calculadora", lang="es"); assert p and p.tool_calls[0].name == "open_app" and p.tool_calls[0].args == {"app_name": "kcalc"}'

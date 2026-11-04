@@ -78,7 +78,7 @@ class WindowsControlTests(unittest.TestCase):
         path = model_directory(env={"LOCALAPPDATA": "C:\\Users\\demo\\AppData\\Local"})
         self.assertEqual(str(path), "C:\\Users\\demo\\AppData\\Local\\MJON AI OS\\models")
         self.assertTrue(isinstance(path, Path) or hasattr(path, "parts"))
-        self.assertEqual(str(model_directory(env={})).split("/")[-1], "models")
+        self.assertEqual(model_directory(env={}).name, "models")
 
     def test_windows_doctor_does_not_call_linux_service_or_external_network(self):
         def status_reader(**kwargs):

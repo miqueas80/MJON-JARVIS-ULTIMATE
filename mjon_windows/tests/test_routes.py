@@ -99,11 +99,12 @@ class WindowsHttpBridgeTests(TestCase):
                                   json={"section": "powershell"}, headers=self.origin)
         self.assertEqual(opened.status_code, 400)
 
-    def test_storage_check_refuses_overcommit_without_writes(self):
+    @patch("mjon_windows.routes.available_storage_bytes", return_value=3*1024**3)
+    def test_storage_check_refuses_overcommit_without_writes(self, available):
         response = self.client.post(
             "/api/mjon/windows/storage/check",
             headers=self.origin,
-            json={"model_bytes": 2*1024**3, "free_bytes": 3*1024**3}
+            json={"model_bytes": 2*1024**3}
         )
         self.assertEqual(response.status_code, 200)
         result = response.json()
@@ -115,10 +116,13 @@ class WindowsHttpBridgeTests(TestCase):
         self.assertEqual(self.client.post(
             "/api/mjon/windows/storage/check",
             headers={"Origin": "http://127.0.0.1:9000"},
-            json={"model_bytes": 1234, "free_bytes": 1234}).status_code, 403)
+            json={"model_bytes": 1234}).status_code, 403)
         self.assertEqual(self.client.post(
             "/api/mjon/windows/storage/check", headers=self.origin,
-            json={"model_bytes": -5, "free_bytes": 0}).status_code, 422)
+            json={"model_bytes": -5}).status_code, 422)
+        self.assertEqual(self.client.post(
+            "/api/mjon/windows/storage/check", headers=self.origin,
+            json={"model_bytes": 10, "free_bytes": 10**15}).status_code, 422)
 
     def test_routes_are_attached_only_to_explicit_windows_edition(self):
         source = (Path(__file__).resolve().parents[2] / "dodaios/ui/web/server.py").read_text(encoding="utf-8")

@@ -4,6 +4,21 @@ Esta imagen es una **versión de prueba**, no la edición definitiva de MJON AI 
 
 Incluye una distribución Debian 13 con KDE Plasma y el motor de JARVIS (fork de Dodaios) integrado. La imagen **no incluye un instalador del sistema operativo**, para priorizar pruebas no destructivas desde USB.
 
+## Corrección del segundo arranque en hardware
+
+En una Conectar Igualdad real, KDE Plasma y la ventana MJON arrancaron,
+pero la pantalla del asistente quedó en `Starting...`. El registro de
+`mjon-jarvis.service` mostró
+`ModuleNotFoundError: No module named 'dodaios.verse_host.relays'`.
+La distribución Python original no incluía los módulos
+`dodaios/verse_host/relays/*.py` en sus ruedas instalables porque
+faltaba `dodaios/verse_host/relays/__init__.py`.
+
+Esta generación corrige el paquete, comprueba todos esos módulos antes
+de montar la imagen y ejecuta la importación real en el constructor de
+Debian. La prueba física de esta corrección sigue pendiente hasta que
+se inicie la ISO nueva en el equipo.
+
 ## Mejoras verificadas para esta generación
 
 - Corrección del usuario `user` de Debian Live y comprobación real de su contraseña mediante PAM.

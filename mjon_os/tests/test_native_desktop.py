@@ -26,6 +26,8 @@ class NativeDesktopTests(unittest.TestCase):
         self.assertIn("mjon-jarvis.service",proof)
         self.assertIn("emit PLASMA_DESKTOP_ACTIVE",proof)
         self.assertIn("emit JARVIS_SERVICE_STABLE",proof)
+        self.assertIn("emit JARVIS_API_READY",proof)
+        self.assertIn("/api/health",proof)
 
     def test_greeter_only_not_a_usable_desktop(self):
         log=("MJON_VM_PROOF KERNEL_RUNNING\n"
@@ -35,16 +37,19 @@ class NativeDesktopTests(unittest.TestCase):
         self.assertTrue(proof.live_user)
         self.assertFalse(proof.plasma)
         self.assertFalse(proof.jarvis)
+        self.assertFalse(proof.api)
 
     def test_real_desktop_and_service_markers_are_required(self):
         log=("MJON_VM_PROOF KERNEL_RUNNING\n"
              "MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE\n"
              "MJON_VM_PROOF LIVE_USER_READY\n"
              "MJON_VM_PROOF PLASMA_DESKTOP_ACTIVE\n"
-             "MJON_VM_PROOF JARVIS_SERVICE_STABLE\n")
+             "MJON_VM_PROOF JARVIS_SERVICE_STABLE\n"
+             "MJON_VM_PROOF JARVIS_API_READY\n")
         proof=analyze_serial_log(log)
         self.assertTrue(proof.plasma)
         self.assertTrue(proof.jarvis)
+        self.assertTrue(proof.api)
 
 
 if __name__ == "__main__":

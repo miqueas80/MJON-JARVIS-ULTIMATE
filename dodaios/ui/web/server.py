@@ -17,6 +17,7 @@ import asyncio
 import math
 import mimetypes
 import os
+import sys
 import time
 from collections.abc import Callable
 from pathlib import Path, PurePosixPath
@@ -667,6 +668,13 @@ class WebServer:
         app.include_router(ide_browser_router)
         app.include_router(profile_router)
         app.include_router(settings_router)
+        # The MJON Windows edition exposes the existing backend to its own
+        # desktop controls. Do not alter the upstream Dodaios Windows experience,
+        # or load Windows-only surfaces in the Debian Live build.
+        if sys.platform == "win32" and os.environ.get("MJON_WINDOWS_EDITION") == "1":
+            from mjon_windows.routes import router as mjon_windows_router
+
+            app.include_router(mjon_windows_router)
         app.include_router(soul_router)
         app.include_router(permissions_router)
         # In-app updater (GET status / POST apply). Managed-install only — see

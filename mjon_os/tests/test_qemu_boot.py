@@ -22,12 +22,14 @@ class BootProbeTests(unittest.TestCase):
             "MJON_VM_PROOF LIVE_USER_READY\n"
             "MJON_VM_PROOF PLASMA_DESKTOP_ACTIVE\n"
             "MJON_VM_PROOF JARVIS_SERVICE_STABLE\n"
+            "MJON_VM_PROOF JARVIS_API_READY\n"
         )
         self.assertTrue(evidence.kernel)
         self.assertTrue(evidence.userspace)
         self.assertTrue(evidence.live_user)
         self.assertTrue(evidence.plasma)
         self.assertTrue(evidence.jarvis)
+        self.assertTrue(evidence.api)
 
     def test_el_torito_record_only_is_not_a_boot(self):
         evidence = analyze_serial_log("El Torito boot img : BIOS and EFI entries detected")
@@ -36,6 +38,7 @@ class BootProbeTests(unittest.TestCase):
         self.assertFalse(evidence.live_user)
         self.assertFalse(evidence.plasma)
         self.assertFalse(evidence.jarvis)
+        self.assertFalse(evidence.api)
 
     def test_kernel_without_userspace_does_not_count(self):
         evidence = analyze_serial_log("Linux version 6.12.0\nKernel panic - not syncing")
@@ -92,7 +95,8 @@ class BootProbeTests(unittest.TestCase):
              "print('MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE', flush=True); "
              "print('MJON_VM_PROOF LIVE_USER_READY', flush=True); "
              "print('MJON_VM_PROOF PLASMA_DESKTOP_ACTIVE', flush=True); "
-             "print('MJON_VM_PROOF JARVIS_SERVICE_STABLE', flush=True); time.sleep(30)"],
+             "print('MJON_VM_PROOF JARVIS_SERVICE_STABLE', flush=True); "
+             "print('MJON_VM_PROOF JARVIS_API_READY', flush=True); time.sleep(30)"],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
         try:
@@ -102,6 +106,7 @@ class BootProbeTests(unittest.TestCase):
             self.assertIn("MJON_VM_PROOF LIVE_USER_READY", output)
             self.assertIn("MJON_VM_PROOF PLASMA_DESKTOP_ACTIVE", output)
             self.assertIn("MJON_VM_PROOF JARVIS_SERVICE_STABLE", output)
+            self.assertIn("MJON_VM_PROOF JARVIS_API_READY", output)
             self.assertLess(time.monotonic() - start, 3.0)
         finally:
             child.kill()

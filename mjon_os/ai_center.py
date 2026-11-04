@@ -211,6 +211,9 @@ def run_gui() -> int:
             if module["status"] == "installed_unverified":
                 state = "Detectado · modelo no verificado"
                 style = "mjon-okay"
+            elif module["status"] == "remote_opt_in":
+                state = "Proveedor remoto · requiere autorización"
+                style = "mjon-warn"
             else:
                 state = "Opcional · no instalado"
                 style = "mjon-warn"

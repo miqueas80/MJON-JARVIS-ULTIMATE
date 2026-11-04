@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
+from .doctor import parse_memtotal
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from typing import Callable, Any
@@ -19,13 +21,20 @@ class InferenceUnavailable(RuntimeError):
 class OllamaClient:
     DEFAULT_ENDPOINT = "http://127.0.0.1:11434"
 
-    def __init__(self, endpoint: str = DEFAULT_ENDPOINT, *, opener: Callable[..., Any] | None = None):
+    def __init__(self, endpoint: str = DEFAULT_ENDPOINT, *, opener: Callable[..., Any] | None = None,
+                 ram_bytes: int | None = None):
         # Prevent accidental credentials or private prompts leaking to remote
         # endpoints or DNS names that merely LOOK local.
         if endpoint != self.DEFAULT_ENDPOINT:
             raise ValueError("MJON offline adapter only permits literal IPv4 loopback Ollama")
         self.endpoint = endpoint
         self._opener = opener or urlopen
+        if ram_bytes is None:
+            try:
+                ram_bytes = parse_memtotal(Path("/proc/meminfo").read_text(encoding="ascii"))
+            except OSError:
+                ram_bytes = None
+        self._ram_bytes = ram_bytes
 
     def _request(self, route: str, *, body: dict | None = None, timeout: int = 8) -> dict:
         url = self.endpoint + route
@@ -52,28 +61,47 @@ class OllamaClient:
             raise InferenceUnavailable("Ollama devolvió un formato inesperado.")
         return result
 
-    def models(self) -> tuple[str, ...]:
+    def _model_inventory(self) -> tuple[tuple[str, int | None], ...]:
         payload = self._request("/api/tags", timeout=4)
         models = payload.get("models", [])
         if not isinstance(models, list):
             raise InferenceUnavailable("Ollama no devolvió un catálogo de modelos válido.")
-        names = []
+        names: list[tuple[str, int | None]] = []
         for item in models:
             if isinstance(item, dict) and isinstance(item.get("name"), str):
                 name = item["name"].strip()
-                if name and len(name) <= 200 and name not in names:
-                    names.append(name)
+                size = item.get("size")
+                if not isinstance(size, int) or isinstance(size, bool) or size < 0:
+                    size = None
+                if name and len(name) <= 200 and name not in [item[0] for item in names]:
+                    names.append((name, size))
         return tuple(names)
+
+    def models(self) -> tuple[str, ...]:
+        return tuple(name for name, _ in self._model_inventory())
 
     def ask(self, prompt: str, *, model: str | None = None) -> str:
         if not isinstance(prompt, str) or not prompt.strip() or len(prompt) > 8192:
             raise ValueError("Escribí una consulta de 1 a 8192 caracteres.")
-        available = self.models()
+        available = self._model_inventory()
         if not available:
             raise InferenceUnavailable("Ollama está accesible, pero no tiene ningún modelo local descargado.")
-        chosen = model or available[0]
-        if chosen not in available:
+        sizes = {name: size for name, size in available}
+        if model is not None and model not in sizes:
             raise InferenceUnavailable("El modelo solicitado no está descargado en Ollama.")
+        # A GGUF/disk-size heuristic: 40% physical RAM budget leaves memory
+        # for KDE, JARVIS, KV cache and OS overhead. It is not an OOM guarantee.
+        max_size = int(self._ram_bytes * 0.40) if self._ram_bytes else None
+        candidates = [name for name, size in available
+                      if max_size is None or size is None or size <= max_size]
+        if model is not None:
+            if model not in candidates:
+                raise InferenceUnavailable("Modelo rechazado por política conservadora de memoria RAM.")
+            chosen = model
+        else:
+            if not candidates:
+                raise InferenceUnavailable("Ningún modelo local cumple la política de memoria RAM.")
+            chosen = min(candidates, key=lambda name: sizes[name] if sizes[name] is not None else 2**64)
         response = self._request(
             "/api/chat",
             body={

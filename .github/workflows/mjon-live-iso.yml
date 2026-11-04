@@ -61,6 +61,7 @@ jobs:
         run: |
           python -m unittest discover -s mjon_os/tests -p 'test_*.py' -v
           sh -n mjon_os/live/config/includes.chroot/usr/local/bin/mjon-vm-proof
+          sh -n mjon_os/live/config/includes.chroot/usr/local/bin/mjon-control-center
       - name: Build the modified Dodaios engine wheel
         run: |
           python -m pip install --disable-pip-version-check 'setuptools>=84.1.0' wheel build

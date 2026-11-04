@@ -56,6 +56,9 @@ jobs:
           if ($LASTEXITCODE -eq 0) { throw 'Missing source ISO was wrongly accepted' }
           if (Test-Path "$env:RUNNER_TEMP\not-created.iso") { throw 'Builder created output after preflight failure' }
           Write-Output 'MISSING_WINDOWS_ISO_REJECTED'
+          # GitHub pwsh wraps scripts and propagates LASTEXITCODE from native calls.
+          # This expected negative test must explicitly reset the step result.
+          exit 0
 
   integration-preview:
     name: Recompose only on owner's private Windows runner

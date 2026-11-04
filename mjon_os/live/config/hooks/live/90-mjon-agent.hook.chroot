@@ -6,6 +6,16 @@ if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
   echo 'MJON: expected exactly one locally built agent wheel' >&2
   exit 1
 fi
+# Fail at image construction rather than giving the user an unusable desktop.
+# These binaries are the actual graphical settings center and WPA Wi-Fi engine.
+for required in /usr/bin/systemsettings /usr/sbin/wpa_supplicant /usr/sbin/rfkill; do
+  if [ ! -x "$required" ]; then
+    echo "MJON Control Center: missing required OS executable $required" >&2
+    exit 1
+  fi
+done
+test -f /usr/share/applications/mjon-control-center.desktop
+test -x /etc/skel/Desktop/Centro-de-mando-MJON.desktop
 # Debian distributes GTK GI bindings in its system Python, not as generic pip wheels.
 # Allow this interpreter to see only the system packages plus the isolated venv.
 /usr/bin/python3 -m venv --system-site-packages /opt/mjon-ai-os/venv

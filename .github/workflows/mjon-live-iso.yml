@@ -122,10 +122,10 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends qemu-system-x86 ovmf
           iso="$MJON_CI_TMP/mjon-live/MJON-AI-OS-dev-amd64.iso"
-          python -m mjon_os.qemu_boot --iso "$iso" --timeout 240 \
+          python -m mjon_os.qemu_boot --iso "$iso" --timeout 420 \
             --log "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
           python -m mjon_os.qemu_boot --iso "$iso" \
-            --uefi-firmware /usr/share/OVMF/OVMF_CODE_4M.fd --timeout 240 \
+            --uefi-firmware /usr/share/OVMF/OVMF_CODE_4M.fd --timeout 420 \
             --log "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
           # Hardware exposed a broken Live login: the greeter alone is not enough.
           # The replacement guest proof must exercise user/live PAM authentication.
@@ -135,6 +135,10 @@ jobs:
           # exists. Never mark ISO boot verified without account and password.
           grep -Fq 'MJON_VM_PROOF LIVE_USER_READY' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
           grep -Fq 'MJON_VM_PROOF LIVE_USER_READY' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
+          grep -Fq 'MJON_VM_PROOF PLASMA_DESKTOP_ACTIVE' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
+          grep -Fq 'MJON_VM_PROOF PLASMA_DESKTOP_ACTIVE' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
+          grep -Fq 'MJON_VM_PROOF JARVIS_SERVICE_STABLE' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
+          grep -Fq 'MJON_VM_PROOF JARVIS_SERVICE_STABLE' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
       - name: Upload experimental ISO for virtual-machine testing (not release)
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

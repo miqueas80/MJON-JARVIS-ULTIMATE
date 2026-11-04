@@ -23,6 +23,17 @@ else
   exit 1
 fi
 
+# Fail image verification if the installed guest lacks its actual graphical
+# configuration tool. Do not confuse a menu entry with a working settings app.
+if [ -x /usr/bin/systemsettings ] && [ -x /usr/sbin/wpa_supplicant ] && \
+   [ -f /usr/share/applications/mjon-control-center.desktop ] && \
+   [ -x /usr/local/bin/mjon-control-center ]; then
+  emit CONTROL_CENTER_READY
+else
+  emit CONTROL_CENTER_MISSING
+  exit 1
+fi
+
 # SDDM autologin and KDE Plasma can take longer than the login greeter itself.
 # Confirm a real Plasma session process before claiming a working desktop.
 uid="$(id -u user)"

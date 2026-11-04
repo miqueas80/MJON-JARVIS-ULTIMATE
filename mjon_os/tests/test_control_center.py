@@ -55,6 +55,12 @@ class ControlCenterTests(unittest.TestCase):
         self.assertNotIn("curl ", script)
         self.assertNotIn("pkexec ", script)
 
+    def test_guest_boot_proves_center_is_available_not_just_listed(self):
+        proof = (INCLUDES / "usr/local/bin/mjon-vm-proof").read_text(encoding="utf-8")
+        self.assertIn("emit CONTROL_CENTER_READY", proof)
+        self.assertIn("/usr/bin/systemsettings", proof)
+        self.assertIn("/usr/share/applications/mjon-control-center.desktop", proof)
+
     def test_image_builder_marks_shortcuts_executable(self):
         builder = (CONFIG.parents[1] / "image_builder.py").read_text(encoding="utf-8")
         self.assertIn("'usr/local/bin/mjon-control-center'", builder)

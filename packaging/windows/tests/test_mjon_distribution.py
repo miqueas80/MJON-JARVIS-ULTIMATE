@@ -8,7 +8,7 @@ from unittest import TestCase
 
 import pycdlib
 
-from packaging.windows.build_mjon_tools_iso import make_distribution
+from mjon_windows.iso import make_distribution
 
 
 class WindowsToolsDistributionTests(TestCase):

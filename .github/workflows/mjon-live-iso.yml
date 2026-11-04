@@ -1,5 +1,6 @@
 # Experimental ISO builder. Runs only when this workflow changes or is explicitly dispatched.
-# It never installs the OS on a real computer, and never publishes a release.
+# It never installs the OS on a real computer. A validated push explicitly
+# labeled release(os) publishes a downloadable experimental Live USB prerelease.
 # Build attempt 1 proved a binary-only pip restriction rejected Vosk/srt;
 # this build uses the reviewed native hook with desktop extras and source fallback.
 name: MJON AI OS - experimental USB ISO

@@ -6,7 +6,14 @@ El sistema se ejecuta desde USB. No incluye un instalador de Debian.
 
 PRIMERAS COMPROBACIONES
 
-1. Verificá el escritorio KDE, teclado, mouse, Wi-Fi y audio.
+1. Abrí el ícono "MJON AI OS - Centro de mando" del escritorio
+   (también está en el menú de aplicaciones, sección Configuración).
+   Allí podés manejar Wi-Fi, Bluetooth, sonido, pantalla y energía
+   SIN usar terminal. El menú de redes está además en la bandeja del panel.
+2. Para instalar aplicaciones gráficamente, abrí "Discover" desde el menú.
+   ATENCIÓN: los cambios de una sesión USB Live NO se conservan al reiniciar
+   si el pendrive no tiene persistencia configurada.
+3. Verificá el escritorio KDE, teclado, mouse, Wi-Fi y audio.
 2. Abrí la aplicación "MJON AI OS - JARVIS".
 3. Para comprobar el estado del sistema, abrí Konsole y escribí:
 

@@ -39,6 +39,9 @@ class LiveImageTests(unittest.TestCase):
             archive.writestr('dodaios-4.1.2.dist-info/METADATA', 'Metadata-Version: 2.3\nName: dodaios\nVersion: 4.1.2\n')
             archive.writestr('mjon_jarvis/spanish_bridge.py', '# MJON')
             archive.writestr('mjon_os/config_paths.py', '# MJON')
+            archive.writestr('mjon_os/ai_fabric.py', '# MJON')
+            archive.writestr('mjon_os/ai_center.py', '# MJON')
+            archive.writestr('mjon_os/local_inference.py', '# MJON')
             archive.writestr('dodaios/ui/web/dist/index.html', '<!doctype html><title>MJON</title>')
             for module in ('__init__', 'base', 'chat_tails', 'commands',
                            'meetings', 'progression', 'roster', 'screens', 'settings'):

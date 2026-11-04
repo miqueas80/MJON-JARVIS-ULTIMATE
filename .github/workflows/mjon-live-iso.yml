@@ -1,4 +1,7 @@
 # Experimental ISO builder. Runs only when this workflow changes or is explicitly dispatched.
+# Hardware USB regression: installed JARVIS was stuck in "Starting..." due to
+# omitted dodaios.verse_host.relays package. The build now imports the actual
+# Verse host and relays in the Debian chroot; a missing module fails the ISO.
 # It never installs the OS on a real computer. A validated push explicitly
 # labeled release(os) publishes a downloadable experimental Live USB prerelease.
 # Build attempt 1 proved a binary-only pip restriction rejected Vosk/srt;

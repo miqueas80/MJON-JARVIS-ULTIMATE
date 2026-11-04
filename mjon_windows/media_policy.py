@@ -18,11 +18,10 @@ def calculate_required_space(source_bytes: int, payload_bytes: int) -> int:
 
     Reports capacity planning only, not a guarantee for a specific media layout.
     """
-    for value in (source_bytes, payload_bytes):
-        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
-            if value == 0 and value is payload_bytes:
-                continue
-            raise ValueError("Source must be positive and payload nonnegative integer.")
+    if isinstance(source_bytes, bool) or not isinstance(source_bytes, int) or source_bytes <= 0:
+        raise ValueError("Source ISO size must be a positive integer.")
+    if isinstance(payload_bytes, bool) or not isinstance(payload_bytes, int) or payload_bytes < 0:
+        raise ValueError("Payload size must be a nonnegative integer.")
     return 3 * source_bytes + 2 * payload_bytes + 5 * GIB
 
 

@@ -4,6 +4,17 @@ Esta imagen es una **versión de prueba**, no la edición definitiva de MJON AI 
 
 Incluye una distribución Debian 13 con KDE Plasma y el motor de JARVIS (fork de Dodaios) integrado. La imagen **no incluye un instalador del sistema operativo**, para priorizar pruebas no destructivas desde USB.
 
+## Mejoras verificadas para esta generación
+
+- Corrección del usuario `user` de Debian Live y comprobación real de su contraseña mediante PAM.
+- Inicio automático de una sola sesión KDE Plasma para evitar solicitar credenciales cada vez que arranca el pendrive.
+- Puerta de publicación más estricta: el mismo USB debe iniciar Linux, autenticar al usuario Live, abrir Plasma, mantener el servicio JARVIS activo y responder en `http://127.0.0.1:47821/api/health` en máquinas virtuales BIOS y UEFI.
+- Conservación del entorno Live sin instalador, manteniendo intactas las particiones de Windows durante el arranque normal.
+
+**No se garantiza que toda aplicación, micrófono, aceleración gráfica o modelo de IA funcione en todos los equipos.** El objetivo de esta entrega es validar el sistema operativo y la integración nativa en hardware real. Algunas funciones avanzadas de IA y voz siguen sujetas a configuración y modelos instalados.
+
+Si usás **Ventoy**, copiá esta ISO nueva al espacio de archivos del pendrive y elegila en el menú de Ventoy; **no hace falta formatear otra vez el USB**. Asegurate de seleccionar la ISO cuyo nombre corresponde a la versión recién descargada y no el archivo anterior.
+
 ## Descargar y comprobar
 
 Descargá el archivo `MJON-AI-OS-dev-amd64.iso` y el archivo de verificación `.iso.sha256` que aparecen debajo de esta descripción. Conservá ambos en la misma carpeta y verificá el SHA-256 antes de grabar la imagen.

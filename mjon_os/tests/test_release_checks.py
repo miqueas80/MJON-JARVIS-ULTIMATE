@@ -21,8 +21,12 @@ class USBReleaseTests(unittest.TestCase):
         bios = root / "boot-bios-serial.txt"
         uefi = root / "boot-uefi-serial.txt"
         for text in (bios, uefi):
-            text.write_text("MJON_VM_EVIDENCE kernel=True userspace=True live_user=True\n"
-                            "MJON_VM_PROOF LIVE_USER_READY\n")
+            text.write_text(
+                "MJON_VM_EVIDENCE kernel=True userspace=True live_user=True plasma=True jarvis=True\n"
+                "MJON_VM_PROOF LIVE_USER_READY\n"
+                "MJON_VM_PROOF PLASMA_DESKTOP_ACTIVE\n"
+                "MJON_VM_PROOF JARVIS_SERVICE_STABLE\n"
+            )
         return iso, sha, boot, bios, uefi
 
     def test_valid_candidate_inputs(self):
@@ -49,6 +53,16 @@ class USBReleaseTests(unittest.TestCase):
             bios.write_text("MJON_VM_EVIDENCE kernel=True userspace=True live_user=False\n"
                             "MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE\n")
             with self.assertRaisesRegex(ValueError, "Live user"):
+                check_candidate(iso, sha, boot, bios, uefi, min_bytes=1)
+
+    def test_release_refuses_login_without_plasma_or_jarvis(self):
+        with TemporaryDirectory() as tmp:
+            iso, sha, boot, bios, uefi = self._inputs(Path(tmp))
+            uefi.write_text(
+                "MJON_VM_EVIDENCE kernel=True userspace=True live_user=True plasma=False jarvis=False\n"
+                "MJON_VM_PROOF LIVE_USER_READY\n"
+            )
+            with self.assertRaisesRegex(ValueError, "desktop"):
                 check_candidate(iso, sha, boot, bios, uefi, min_bytes=1)
 
     def test_uefi_is_required(self):

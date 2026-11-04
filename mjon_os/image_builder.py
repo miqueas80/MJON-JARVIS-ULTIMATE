@@ -126,6 +126,13 @@ def prepare_image(*, repo_root: Path, wheel: Path, destination: Path) -> dict[st
         doctor.chmod(0o755)
         vm_marker = staging / 'config/includes.chroot/usr/local/bin/mjon-vm-proof'
         vm_marker.chmod(0o755)
+        # KDE Plasma only treats desktop shortcuts as trusted when executable.
+        # Keep a single installed app entry and a first-login Desktop shortcut.
+        for relative in (
+            'usr/local/bin/mjon-control-center',
+            'etc/skel/Desktop/Centro-de-mando-MJON.desktop',
+        ):
+            (staging / 'config/includes.chroot' / relative).chmod(0o755)
 
         includes = staging / 'config/includes.chroot'
         wheels_dir = includes / 'opt/mjon-ai-os/wheels'

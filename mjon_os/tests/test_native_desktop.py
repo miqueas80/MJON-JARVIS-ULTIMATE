@@ -24,8 +24,8 @@ class NativeDesktopTests(unittest.TestCase):
         proof=(CONFIG/"usr/local/bin/mjon-vm-proof").read_text(encoding="utf-8")
         self.assertIn("plasmashell",proof)
         self.assertIn("mjon-jarvis.service",proof)
-        self.assertIn("MJON_VM_PROOF PLASMA_DESKTOP_ACTIVE",proof)
-        self.assertIn("MJON_VM_PROOF JARVIS_SERVICE_STABLE",proof)
+        self.assertIn("emit PLASMA_DESKTOP_ACTIVE",proof)
+        self.assertIn("emit JARVIS_SERVICE_STABLE",proof)
 
     def test_greeter_only_not_a_usable_desktop(self):
         log=("MJON_VM_PROOF KERNEL_RUNNING\n"

@@ -81,7 +81,7 @@ class LiveImageTests(unittest.TestCase):
         wheel = self.base / 'missing-relays.whl'
         with ZipFile(wheel, 'w') as archive:
             archive.writestr('dodaios-4.1.2.dist-info/METADATA',
-                             'Metadata-Version: 2.3\\nName: dodaios\\nVersion: 4.1.2\\n')
+                             'Metadata-Version: 2.3\nName: dodaios\nVersion: 4.1.2\n')
             archive.writestr('mjon_jarvis/spanish_bridge.py', '# MJON')
             archive.writestr('mjon_os/config_paths.py', '# MJON')
             archive.writestr('dodaios/ui/web/dist/index.html', '<title>MJON</title>')

@@ -49,6 +49,8 @@ class WindowsHttpBridgeTests(TestCase):
         response = self.client.get("/api/mjon/windows/models")
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["server_reachable"])
+        self.assertFalse(response.json()["ready"])
+        self.assertTrue(response.json()["models_available"])
         self.assertFalse(response.json()["generation_tested"])
         self.assertEqual(response.json()["models"], ["small:latest"])
 

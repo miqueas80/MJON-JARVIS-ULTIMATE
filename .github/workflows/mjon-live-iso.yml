@@ -1,4 +1,7 @@
 # Experimental ISO builder. Runs only when this workflow changes or is explicitly dispatched.
+# Hardware fix: Realtek RTL8822CE loads firmware, but no Wi-Fi backend when
+# wpasupplicant is omitted because APT recommends are disabled. The package
+# list now explicitly bundles wpasupplicant, rfkill and KDE's network applet.
 # Hardware USB regression: installed JARVIS was stuck in "Starting..." due to
 # omitted dodaios.verse_host.relays package. The build now imports the actual
 # Verse host and relays in the Debian chroot; a missing module fails the ISO.

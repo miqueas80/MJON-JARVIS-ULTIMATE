@@ -4,6 +4,28 @@ Esta imagen es una **versión de prueba**, no la edición definitiva de MJON AI 
 
 Incluye una distribución Debian 13 con KDE Plasma y el motor de JARVIS (fork de Dodaios) integrado. La imagen **no incluye un instalador del sistema operativo**, para priorizar pruebas no destructivas desde USB.
 
+## Ecosistema nativo de IA — primera fase
+
+Esta edición agrega la base del **Centro de mando unificado** de MJON AI OS:
+
+- Interfaz gráfica con páginas de sistema, módulos IA, pruebas de IA local y seguridad.
+- Los ajustes de redes, audio, Bluetooth, pantalla y energía se abren con los
+  controles reales de KDE Plasma; sin requerir una terminal.
+- Registro de motores y agentes de diversas familias, detectando instalaciones
+  reales y distinguiendo ejecutables de pesos de modelos.
+- Política de uso conservador en computadoras de 8 GiB: los entornos avanzados
+  de entrenamiento/servidores GPU se mantienen opcionales y apagados.
+- Un adaptador de prueba para Ollama local en `127.0.0.1:11434`. **No se incluye
+  Ollama ni ningún modelo descargado**: si no existen, se indica que no hay
+  motor local disponible en vez de generar respuestas falsas.
+- Memoria comprimida zram y paquetes de seguridad base; todavía faltan perfiles
+  de aislamiento de agentes auditados y persistencia USB.
+- La conexión del nuevo plano de control con todas las conversaciones y
+  herramientas de JARVIS sigue en desarrollo; no se anuncia como completa.
+
+Esta es una **fase funcional de integración**, no la entrega de todas las
+tecnologías opcionales enumeradas en la especificación.
+
 ## Corrección del segundo arranque en hardware
 
 En una Conectar Igualdad real, KDE Plasma y la ventana MJON arrancaron,

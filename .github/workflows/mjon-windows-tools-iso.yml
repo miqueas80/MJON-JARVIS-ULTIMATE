@@ -1,0 +1,87 @@
+# A Windows executable bundled in a NON-BOOTABLE ISO distribution image.
+# It does NOT redistribute Microsoft Windows or claim to provide a full OS.
+name: MJON Windows tools distribution ISO (nonbootable preview)
+
+on:
+  push:
+    branches: [feature/mjon-windows-migration]
+    paths:
+      - 'mjon_windows/**'
+      - 'mjon_os/ai_fabric.py'
+      - 'mjon_os/local_inference.py'
+      - 'mjon_jarvis/system_status.py'
+      - 'packaging/windows/mjon_windows_entry.py'
+      - 'packaging/windows/tests/test_mjon_distribution.py'
+      - '.github/workflows/mjon-windows-tools-iso.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Build, run and inspect Windows executable and ISO
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout audited MJON branch
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          lfs: false
+          persist-credentials: false
+      - name: Python 3.13
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Install packaging tools
+        run: python -m pip install --disable-pip-version-check "pyinstaller>=6.16,<7" "pycdlib==1.14.0"
+      - name: Prove ISO builder source contracts
+        run: python -m unittest discover -s packaging/windows/tests -p "test_mjon_distribution.py" -v
+      - name: Build isolated Windows tools executable
+        run: python -m PyInstaller --onefile --clean --noconfirm --name MJON-Windows-Tools --paths . packaging/windows/mjon_windows_entry.py
+      - name: Smoke test frozen EXE on real Windows
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Join-Path $PWD 'dist\MJON-Windows-Tools.exe'
+          if (-not (Test-Path $exe)) { throw 'Executable does not exist' }
+          if ((Get-Item $exe).Length -le 1000000) { throw 'Frozen EXE unexpectedly small' }
+          $catalog = & $exe --catalog
+          if ($LASTEXITCODE -ne 0) { throw 'Standalone catalog failed' }
+          $catalogData = ($catalog -join "`n") | ConvertFrom-Json
+          if ($catalogData.product -ne 'MJON AI OS') { throw 'Wrong product identity' }
+          if ($catalogData.cloud_fallback -ne $false) { throw 'Unexpected automatic cloud fallback' }
+          $doctor = & $exe --doctor
+          if ($LASTEXITCODE -ne 0) { throw 'Standalone Windows diagnostic failed' }
+          $info = ($doctor -join "`n") | ConvertFrom-Json
+          if ($info.platform -ne 'Windows') { throw 'Wrong host platform' }
+          if ($info.memory_total_bytes -le 0) { throw 'Host RAM unavailable' }
+          if ($info.disk_free_bytes -le 0) { throw 'Disk space probe unavailable' }
+          if ($info.model_tested -ne $false) { throw 'Detected model falsely declared tested' }
+          Write-Output "WINDOWS_EXE_SMOKE_OK memory=$($info.memory_total_bytes) disk=$($info.disk_free_bytes)"
+      - name: Build data ISO with licenses and checksums
+        run: python -m mjon_windows.iso --exe dist/MJON-Windows-Tools.exe --iso dist/MJON-AI-OS-Windows-Tools-Preview.iso --license LICENSE --notice NOTICE
+      - name: Verify created ISO is a valid data image with exact executable
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $manifest = Get-Content dist\MJON-AI-OS-Windows-Tools-Preview.iso.json -Raw | ConvertFrom-Json
+          if ($manifest.bootable -ne $false) { throw 'Misleading bootability flag' }
+          if ($manifest.windows_included -ne $false) { throw 'Misleading Windows OS flag' }
+          if ($manifest.graphical_shell_included -ne $false) { throw 'Misleading UI flag' }
+          $iso = Get-Item dist\MJON-AI-OS-Windows-Tools-Preview.iso
+          if ($iso.Length -le 1000000) { throw 'ISO unexpectedly small' }
+          $actual = (Get-FileHash $iso.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $manifest.iso_sha256) { throw 'ISO checksum mismatch' }
+          Write-Output "MJON_DATA_ISO_VERIFIED $($iso.Length) bytes sha256=$actual"
+      - name: Upload downloadable Windows distribution
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: MJON-Windows-Tools-Preview-nonbootable
+          path: |
+            dist/MJON-Windows-Tools.exe
+            dist/MJON-AI-OS-Windows-Tools-Preview.iso
+            dist/MJON-AI-OS-Windows-Tools-Preview.iso.json
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30

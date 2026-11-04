@@ -67,6 +67,12 @@ class AIFabricTests(unittest.TestCase):
         self.assertEqual(ollama["status"], "not_installed")
         self.assertEqual(ollama["launch"], "manual_only")
 
+    def test_external_provider_is_not_mislabeled_as_locally_installed(self):
+        entries = inspect_modules(executable_exists=lambda name: False)
+        provider = next(m for m in entries if m["id"] == "free_llm_api")
+        self.assertEqual(provider["status"], "remote_opt_in")
+        self.assertFalse(provider["offline"])
+
     def test_catalog_cannot_execute_network_install_commands(self):
         for module in CATALOG:
             self.assertNotIn("curl | sh", repr(module))

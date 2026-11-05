@@ -7,7 +7,7 @@ ConditionPathExists=%h/.config/mjon-ai-os/ollama-preload.json
 [Service]
 Type=oneshot
 ExecStart=/opt/mjon-ai-os/venv/bin/python -m mjon_os.provider_health --startup-config %h/.config/mjon-ai-os/ollama-preload.json
-TimeoutStartSec=110
+TimeoutStartSec=145
 NoNewPrivileges=yes
 PrivateTmp=yes
 

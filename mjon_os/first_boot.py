@@ -14,11 +14,19 @@ _OVERRIDES = {
     ('trigger.wake_word', 'phrase'): 'Jarvis',
     ('stt', 'language'): 'es',
     ('autostart', 'enabled'): False,
+    # The upstream template is cloud-first (Gemini). A fresh MJON Live profile
+    # must instead select the real local provider, without requiring API keys.
+    # Ollama discovers existing local weights; this does not install or pull any.
+    ('brain', 'primary'): 'ollama',
+    ('brain', 'fallback'): 'ollama',
+    ('brain', 'deep_brain'): 'ollama',
+    ('brain', 'routing_provider'): 'ollama',
+    ('brain', 'routing_model'): '',
 }
 
 
 def personalize_template(source: str, data_directory: Path) -> str:
-    """Set private data storage and Spanish defaults while preserving all other options.
+    """Set native offline brain, private data, Spanish defaults, preserving other options.
 
     The upstream autostart is disabled because the OS already supervises a
     single session process through the graphical-user systemd service.

@@ -131,46 +131,10 @@ def activate_local_brain(config_file: Path) -> bool:
     seen: set[str] = set()
     output: list[str] = []
     for line in raw.splitlines(keepends=True):
-        section = re.match(r'^\s*\[([^\]]+)\]\s*(?:#.*)?
-    parser = argparse.ArgumentParser(description='Provision MJON AI OS user profile')
-    parser.add_argument('--template', type=Path)
-    parser.add_argument('--config', type=Path, required=True)
-    parser.add_argument('--data', type=Path)
-    parser.add_argument('--activate-ollama', action='store_true',
-                        help='Opt-in local provider for an unchanged native cloud profile')
-    args = parser.parse_args(argv)
-    if args.activate_ollama:
-        try:
-            changed = activate_local_brain(args.config)
-        except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
-            parser.exit(2, str(exc) + '\n')
-        print('Proveedor Ollama configurado.' if changed
-              else 'JARVIS ya usa Ollama; sin cambios.')
-        return 0
-    if args.template is None or args.data is None:
-        parser.error('--template y --data son obligatorios para la configuración inicial')
-    provision_user_config(args.template, args.config, args.data)
-    return 0
-
-
-if __name__ == '__main__':
-    sys.exit(main())
-, line.strip())
+        section = re.match(r'^\s*\[([^\]]+)\]\s*(?:#.*)?$', line.strip())
         if section:
             table = section.group(1).strip()
-        assignment = re.match(r'^(\s*)([a-zA-Z_][a-zA-Z_0-9-]*)\s*=(.*)
-    parser = argparse.ArgumentParser(description='Provision MJON AI OS user profile')
-    parser.add_argument('--template', type=Path, required=True)
-    parser.add_argument('--config', type=Path, required=True)
-    parser.add_argument('--data', type=Path, required=True)
-    args = parser.parse_args(argv)
-    provision_user_config(args.template, args.config, args.data)
-    return 0
-
-
-if __name__ == '__main__':
-    sys.exit(main())
-, line)
+        assignment = re.match(r'^(\s*)([a-zA-Z_][a-zA-Z_0-9-]*)\s*=(.*)$', line)
         if table == 'brain' and assignment and assignment.group(2) in _LOCAL_BRAIN_DEFAULTS:
             key = assignment.group(2)
             output.append(f'{assignment.group(1)}{key} = {json.dumps(_LOCAL_BRAIN_DEFAULTS[key])}\n')
@@ -204,10 +168,22 @@ if __name__ == '__main__':
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description='Provision MJON AI OS user profile')
-    parser.add_argument('--template', type=Path, required=True)
+    parser.add_argument('--template', type=Path)
     parser.add_argument('--config', type=Path, required=True)
-    parser.add_argument('--data', type=Path, required=True)
+    parser.add_argument('--data', type=Path)
+    parser.add_argument('--activate-ollama', action='store_true',
+                        help='Opt-in local provider for an unchanged native cloud profile')
     args = parser.parse_args(argv)
+    if args.activate_ollama:
+        try:
+            changed = activate_local_brain(args.config)
+        except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
+            parser.exit(2, str(exc) + '\n')
+        print('Proveedor Ollama configurado.' if changed
+              else 'JARVIS ya usa Ollama; sin cambios.')
+        return 0
+    if args.template is None or args.data is None:
+        parser.error('--template y --data son obligatorios para la configuración inicial')
     provision_user_config(args.template, args.config, args.data)
     return 0
 

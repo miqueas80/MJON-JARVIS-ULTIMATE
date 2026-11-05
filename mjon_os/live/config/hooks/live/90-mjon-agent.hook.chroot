@@ -27,6 +27,9 @@ test -x /etc/skel/Desktop/Centro-de-mando-MJON.desktop
 # Real AI control plane and local inference adapter must ship with the image.
 # This is read-only; it never downloads optional models at image or first boot.
 /opt/mjon-ai-os/venv/bin/python -c 'from mjon_os.ai_fabric import CATALOG, plan_capability, HardwareProfile; from mjon_os.local_inference import OllamaClient; assert len(CATALOG) >= 45; assert OllamaClient.DEFAULT_ENDPOINT == "http://127.0.0.1:11434"'
+# The genuine local-only provider guard and full-stream readiness checker
+# must be importable in the installed wheel, not just in source checkout.
+/opt/mjon-ai-os/venv/bin/python -c 'from mjon_os.provider_health import diagnose, preload; from mjon_os.local_inference import is_cloud_model; from dodaios.brain.healthcheck import BrainHealthChecker; assert is_cloud_model("gemma4:cloud") and not is_cloud_model("local:tiny"); assert diagnose and preload and BrainHealthChecker'
 /opt/mjon-ai-os/venv/bin/python -m mjon_os.ai_center --status-json >/dev/null
 # Check the exact missing import from the first real laptop run. A healthy
 # /api/health endpoint is not enough if the UI's Verse routes fail to import.

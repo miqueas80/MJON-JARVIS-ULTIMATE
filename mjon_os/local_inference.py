@@ -116,7 +116,7 @@ class OllamaClient:
         available = tuple((name, size) for name, size in self._model_inventory()
                           if not is_cloud_model(name))
         if not available:
-            raise InferenceUnavailable("Ollama has no downloaded local models; cloud models are not allowed.")
+            raise InferenceUnavailable("Ollama no tiene ningún modelo local descargado; los modelos cloud están prohibidos.")
         sizes = {name: size for name, size in available}
         if model is not None and model not in sizes:
             raise InferenceUnavailable("El modelo solicitado no está descargado en Ollama.")

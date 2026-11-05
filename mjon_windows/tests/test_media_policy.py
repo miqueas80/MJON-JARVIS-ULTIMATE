@@ -84,5 +84,18 @@ class LargeIsoBootOrderingTests(unittest.TestCase):
         self.assertIn("Set-Content", script)
 
 
+
+class NoIsoMountFallbackTests(unittest.TestCase):
+    def test_builder_supports_extracted_source_directory(self):
+        script = (
+            Path(__file__).resolve().parents[2]
+            / "packaging" / "windows" / "build-mjon-win11-media.ps1"
+        ).read_text(encoding="utf-8")
+        self.assertIn("[string]$ExtractedSourceDirectory", script)
+        self.assertIn("VerifyWindowsSource $isoRoot", script)
+        self.assertIn("if ($ExtractedSourceDirectory)", script)
+        self.assertIn("GetSevenZip", script)
+        self.assertIn("VerifyOutputWith7Zip", script)
+
 if __name__ == "__main__":
     unittest.main()

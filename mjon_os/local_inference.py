@@ -10,12 +10,25 @@ import json
 from pathlib import Path
 from .doctor import parse_memtotal
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, build_opener, ProxyHandler
+from urllib.request import Request, build_opener, ProxyHandler, HTTPRedirectHandler
 from typing import Callable, Any
 
 
 class InferenceUnavailable(RuntimeError):
     """The local inference service or requested model is not available."""
+
+
+def is_cloud_model(name: str) -> bool:
+    """Deny Ollama cloud model tags even through a loopback server."""
+    name = name.strip().casefold()
+    return name.endswith(":cloud") or name.endswith("-cloud")
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    """A local HTTP endpoint must never redirect prompts to another host."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 class OllamaClient:
@@ -28,7 +41,7 @@ class OllamaClient:
         if endpoint != self.DEFAULT_ENDPOINT:
             raise ValueError("MJON offline adapter only permits literal IPv4 loopback Ollama")
         self.endpoint = endpoint
-        self._opener = opener or build_opener(ProxyHandler({})).open
+        self._opener = opener or build_opener(ProxyHandler({}), _NoRedirect()).open
         if ram_bytes is None:
             try:
                 ram_bytes = parse_memtotal(Path("/proc/meminfo").read_text(encoding="ascii"))
@@ -98,9 +111,12 @@ class OllamaClient:
     def ask(self, prompt: str, *, model: str | None = None) -> str:
         if not isinstance(prompt, str) or not prompt.strip() or len(prompt) > 8192:
             raise ValueError("Escribí una consulta de 1 a 8192 caracteres.")
-        available = self._model_inventory()
+        if model is not None and is_cloud_model(model):
+            raise InferenceUnavailable("An Ollama cloud model cannot be used in offline mode.")
+        available = tuple((name, size) for name, size in self._model_inventory()
+                          if not is_cloud_model(name))
         if not available:
-            raise InferenceUnavailable("Ollama está accesible, pero no tiene ningún modelo local descargado.")
+            raise InferenceUnavailable("Ollama has no downloaded local models; cloud models are not allowed.")
         sizes = {name: size for name, size in available}
         if model is not None and model not in sizes:
             raise InferenceUnavailable("El modelo solicitado no está descargado en Ollama.")

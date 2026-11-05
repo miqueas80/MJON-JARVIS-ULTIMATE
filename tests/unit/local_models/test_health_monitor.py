@@ -209,8 +209,10 @@ async def test_unused_picks_are_never_loaded(tmp_path: Path) -> None:
         probe=_probe(True),
         generate=generate,
     )
-    assert record == {"status": "ok", "reason": ""}
+    assert record == {"status": "unknown", "reason": "Model configured but not checked because it is not in use."}
     assert calls == [], "a pick nothing selects must not be generated on"
+    assert _record(tmp_path)["status"] == "unknown", "no green badge without a generation"
+    assert _record(tmp_path)["last_ok"] is None, "a server-only probe cannot create last_ok"
 
     record = await hm.check_once(
         _cfg(chat="deepseek-r1:14b", primary="openrouter"),

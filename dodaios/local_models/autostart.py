@@ -134,6 +134,9 @@ def should_autostart(cfg: Any) -> tuple[bool, str]:
     models off would leave Jarvis with nothing to answer on. The user reads
     that instead of watching a model stay resident with no explanation.
     """
+    from mjon_os.ollama_policy import native_mode
+    if native_mode():
+        return False, "native OS startup is managed by explicit MJON user services"
     from dodaios.core.config import ollama_autostart  # lazy (AP-26)
 
     if not ollama_autostart(cfg):
@@ -210,6 +213,10 @@ async def run_once(
     ``detail`` the runtime's own sentence. The probes are injectable; never
     raises on a server that will not come up — the sentence says why.
     """
+    from mjon_os.ollama_policy import native_mode
+    if native_mode():
+        return {"started": False, "warmed": "",
+                "detail": "Native OS startup is managed by explicit MJON user services."}
     from dodaios.brain import ollama_runtime  # lazy (AP-26)
     from dodaios.local_models.health_monitor import server_root  # lazy (AP-26)
 

@@ -176,6 +176,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.activate_ollama:
         try:
+            from .jarvis_probe import verify_jarvis_ollama
+            status = verify_jarvis_ollama(args.config)
+            if not status.ready:
+                parser.exit(2, "JARVIS Ollama verification failed: " + status.detail + "\n")
             changed = activate_local_brain(args.config)
         except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
             parser.exit(2, str(exc) + '\n')

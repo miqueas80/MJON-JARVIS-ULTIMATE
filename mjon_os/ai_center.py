@@ -17,6 +17,7 @@ from threading import Thread
 from .ai_fabric import HardwareProfile, inspect_modules
 from .doctor import parse_memtotal
 from .first_boot import activate_local_brain
+from .jarvis_probe import verify_jarvis_ollama
 from .local_inference import InferenceUnavailable, OllamaClient
 from .provider_health import diagnose as diagnose_ollama, preload as preload_ollama
 
@@ -288,16 +289,13 @@ def run_gui() -> int:
                 elif operation == "activate":
                     # Never switch a user's preferred provider without a click,
                     # and never switch to an Ollama engine that cannot answer.
-                    status = diagnose_ollama(OllamaClient(), verify_generation=True)
+                    root = os.environ.get("MJON_AI_OS_CONFIG_ROOT", "").strip()
+                    xdg = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")))
+                    config = (Path(root) if root else xdg / "mjon-ai-os") / "dodaios.toml"
+                    status = verify_jarvis_ollama(config)
                     if not status.ready:
                         text = "No se cambió JARVIS: " + status.detail
                     else:
-                        root = os.environ.get("MJON_AI_OS_CONFIG_ROOT", "").strip()
-                        if root:
-                            config = Path(root) / "dodaios.toml"
-                        else:
-                            xdg = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")))
-                            config = xdg / "mjon-ai-os" / "dodaios.toml"
                         changed = activate_local_brain(config)
                         if changed:
                             restarted = subprocess.run(
@@ -334,6 +332,9 @@ def run_gui() -> int:
             set_answer("Escribí una consulta para probar el motor local.")
             return
         ask_button.set_sensitive(False)
+        diagnose_button.set_sensitive(False)
+        preload_button.set_sensitive(False)
+        activate_button.set_sensitive(False)
         answer.get_buffer().set_text("Consultando Ollama en este equipo...")
 
         def worker():

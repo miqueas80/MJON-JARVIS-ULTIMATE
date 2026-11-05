@@ -45,11 +45,21 @@ class NoFalseGreenOllamaTests(unittest.IsolatedAsyncioTestCase):
     async def test_new_generation_verdict_can_still_be_green(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "local_models_health.json"
-            with patch.object(monitor, "health_path", return_value=path):
+            with patch.object(monitor, "health_path", return_value=path), \
+                    patch.object(monitor, "_evidence_context", return_value="same-config"):
                 monitor.write_health_record("ok", "", checked_at="2026-11-05T00:00:00")
                 record = monitor.read_health_record()
             self.assertEqual(record["status"], "ok")
             self.assertEqual(record["last_ok"], "2026-11-05T00:00:00")
+
+    async def test_green_record_is_invalidated_when_model_or_endpoint_changes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "local_models_health.json"
+            with patch.object(monitor, "health_path", return_value=path):
+                with patch.object(monitor, "_evidence_context", return_value="old-model-endpoint"):
+                    monitor.write_health_record("ok", "")
+                with patch.object(monitor, "_evidence_context", return_value="new-model-endpoint"):
+                    self.assertEqual(monitor.read_health_record()["status"], "unknown")
 
     async def test_server_only_probe_with_no_chat_model_is_not_green(self):
         async def server(_root):

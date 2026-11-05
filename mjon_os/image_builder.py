@@ -25,6 +25,9 @@ _REQUIRED_WHEEL_FILES = frozenset({
     'mjon_os/ai_fabric.py',
     'mjon_os/ai_center.py',
     'mjon_os/local_inference.py',
+    'mjon_os/ollama_policy.py',
+    'mjon_os/jarvis_probe.py',
+    'mjon_os/offline_payload.py',
     'dodaios/ui/web/dist/index.html',
     'dodaios/verse_host/relays/__init__.py',
     'dodaios/verse_host/relays/base.py',
@@ -83,7 +86,8 @@ def validate_wheel(path: Path) -> str:
         raise ValueError(f'Invalid wheel: {exc}') from exc
 
 
-def prepare_image(*, repo_root: Path, wheel: Path, destination: Path) -> dict[str, str]:
+def prepare_image(*, repo_root: Path, wheel: Path, destination: Path,
+                  offline_payload: Path | None = None) -> dict[str, str]:
     """Stage a reproducible live-build workspace without touching user disks."""
     repo_root = repo_root.resolve()
     wheel = wheel.resolve()
@@ -94,6 +98,9 @@ def prepare_image(*, repo_root: Path, wheel: Path, destination: Path) -> dict[st
         if not (repo_root / item).is_file():
             raise FileNotFoundError(repo_root / item)
     version = validate_wheel(wheel)
+    if offline_payload is not None:
+        from .offline_payload import validate_payload
+        payload_manifest = validate_payload(offline_payload)
     if (repo_root / 'pyproject.toml').is_file():
         project = tomllib.loads((repo_root / 'pyproject.toml').read_text(encoding='utf-8'))
         if project['project']['version'] != version:
@@ -111,6 +118,11 @@ def prepare_image(*, repo_root: Path, wheel: Path, destination: Path) -> dict[st
         'wheel_sha256': checksum,
         'status': 'build candidate: not release-tested',
     }
+    if offline_payload is not None:
+        metadata['offline_model'] = payload_manifest['model']
+        metadata['ollama_version'] = payload_manifest['runtime_version']
+        metadata['offline_payload_sha256'] = hashlib.sha256(
+            (offline_payload / 'manifest.json').read_bytes()).hexdigest()
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.mjon-stage-', dir=destination.parent) as temporary:
@@ -138,6 +150,8 @@ def prepare_image(*, repo_root: Path, wheel: Path, destination: Path) -> dict[st
             (staging / 'config/includes.chroot' / relative).chmod(0o755)
 
         includes = staging / 'config/includes.chroot'
+        if offline_payload is not None:
+            shutil.copytree(offline_payload, includes / 'opt/mjon-ai-os/ollama')
         wheels_dir = includes / 'opt/mjon-ai-os/wheels'
         wheels_dir.mkdir(parents=True)
         shutil.copy2(wheel, wheels_dir / wheel.name)
@@ -164,9 +178,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--repo-root', type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument('--wheel', type=Path, required=True, help='Built wheel from this fork')
     parser.add_argument('--workdir', type=Path, required=True, help='NEW destination; never overwritten')
+    parser.add_argument('--offline-payload', type=Path, help='Explicit reviewed CPU runtime and model bundle')
     args = parser.parse_args(argv)
     try:
-        result = prepare_image(repo_root=args.repo_root, wheel=args.wheel, destination=args.workdir)
+        result = prepare_image(repo_root=args.repo_root, wheel=args.wheel, destination=args.workdir,
+                               offline_payload=args.offline_payload)
     except (ValueError, FileExistsError, FileNotFoundError, KeyError) as exc:
         parser.exit(2, f'MJON image preparation failed: {exc}\n')
     print(json.dumps(result, indent=2, ensure_ascii=False))

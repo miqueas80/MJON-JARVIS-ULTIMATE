@@ -24,7 +24,7 @@ class OllamaClientTests(unittest.TestCase):
         requests = []
         def open_fn(request, **kwargs):
             requests.append(request.full_url)
-            return FakeHTTPResponse({"models": [{"name": "tiny:latest"}]})
+            return FakeHTTPResponse({"models": [{"name": "tiny:latest", "size": 700000}]})
         client = OllamaClient(opener=open_fn)
         self.assertEqual(client.models(), ("tiny:latest",))
         self.assertEqual(requests, ["http://127.0.0.1:11434/api/tags"])
@@ -39,8 +39,8 @@ class OllamaClientTests(unittest.TestCase):
         def opener(request, **kwargs):
             calls.append(request)
             if request.full_url.endswith("/api/tags"):
-                return FakeHTTPResponse({"models": [{"name": "tiny:latest"}]})
-            return FakeHTTPResponse({"message": {"role": "assistant", "content": "Hola desde la PC"}})
+                return FakeHTTPResponse({"models": [{"name": "tiny:latest", "size": 700000}]})
+            return FakeHTTPResponse({"done": True, "message": {"role": "assistant", "content": "Hola desde la PC"}})
         self.assertEqual(OllamaClient(opener=opener).ask("hola"), "Hola desde la PC")
         self.assertEqual(calls[1].full_url, "http://127.0.0.1:11434/api/chat")
         data = json.loads(calls[1].data)
@@ -58,7 +58,7 @@ class OllamaClientTests(unittest.TestCase):
                 ]})
             sent = json.loads(request.data)
             self.assertEqual(sent["model"], "small")
-            return FakeHTTPResponse({"message": {"content": "Modelo chico"} })
+            return FakeHTTPResponse({"done": True, "message": {"content": "Modelo chico"} })
         client = OllamaClient(opener=responder, ram_bytes=8*1024**3)
         self.assertEqual(client.ask("hola"), "Modelo chico")
 
@@ -82,7 +82,7 @@ class OllamaClientTests(unittest.TestCase):
                     {"name": "gemma4:cloud", "size": 300000},
                     {"name": "local:tiny", "size": 700000},
                 ]})
-            return FakeHTTPResponse({"message": {"content": "local response"}})
+            return FakeHTTPResponse({"done": True, "message": {"content": "local response"}})
         client = OllamaClient(opener=responder, ram_bytes=8 * 1024**3)
         self.assertEqual(client.ask("hola"), "local response")
         with self.assertRaisesRegex(InferenceUnavailable, "cloud"):

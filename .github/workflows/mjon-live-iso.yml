@@ -16,7 +16,7 @@ name: MJON AI OS - experimental USB ISO
 
 on:
   push:
-    branches: [feature/mjon-ai-os-native]
+    branches: [feature/mjon-ai-os-native, recovery/mjon-ai-os-stability-20261105]
     paths:
       - '.github/workflows/mjon-live-iso.yml'
   workflow_dispatch:
@@ -82,6 +82,59 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check 'setuptools>=84.1.0' wheel build
           python -m build --wheel --no-isolation -o "$RUNNER_TEMP/wheels"
+      - name: Prepare explicitly bundled CPU runtime and reviewed local model
+        if: github.ref_name == 'recovery/mjon-ai-os-stability-20261105'
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/ollama-cpu"
+          curl -fL --retry 3 --max-time 600 -o "$RUNNER_TEMP/ollama.tar.zst" \
+            https://github.com/ollama/ollama/releases/download/v0.40.14/ollama-linux-amd64.tar.zst
+          echo "993e83d08c3d13d17c55009a3e2664c8a25445e644aec3a68bef5abb6abce67d  $RUNNER_TEMP/ollama.tar.zst" | sha256sum -c -
+          tar --zstd -xf "$RUNNER_TEMP/ollama.tar.zst" -C "$RUNNER_TEMP/ollama-cpu" \
+            --exclude='lib/ollama/cuda*' --exclude='lib/ollama/mlx*'
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/ollama-cpu/LICENSE" \
+            https://raw.githubusercontent.com/ollama/ollama/v0.40.14/LICENSE
+          python -m pip install openai==3.46.0 httpx pydantic-settings structlog loguru keyring psutil pyyaml tomlkit
+          python - <<'PY'
+          import json, os, subprocess, time, urllib.request
+          from pathlib import Path
+          from mjon_os.offline_payload import create_payload
+          base = Path(os.environ['RUNNER_TEMP'])
+          runtime = base / 'ollama-cpu'
+          env = {**os.environ, 'OLLAMA_HOST':'127.0.0.1:11434',
+                 'OLLAMA_MODELS':str(base/'ollama-models'), 'OLLAMA_NO_CLOUD':'1',
+                 'OLLAMA_NUM_PARALLEL':'1', 'OLLAMA_MAX_LOADED_MODELS':'1'}
+          with (base/'ollama-prepare.log').open('w') as log:
+              server = subprocess.Popen([str(runtime/'bin/ollama'), 'serve'], env=env, stdout=log, stderr=log)
+              try:
+                  opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+                  for attempt in range(60):
+                      try:
+                          opener.open('http://127.0.0.1:11434/api/version', timeout=2).close()
+                          break
+                      except OSError:
+                          time.sleep(.5)
+                  subprocess.run([str(runtime/'bin/ollama'), 'pull', 'qwen3:1.7b'], env=env, check=True, timeout=600)
+                  with opener.open('http://127.0.0.1:11434/api/tags') as response:
+                      rows = json.load(response)['models']
+                  assert any(row['name']=='qwen3:1.7b' and row['digest']=='8f68893c685c3ddff2aa3fffce2aa60a30bb2da65ca488b61fff134a4d1730e7' for row in rows), 'Model manifest changed; review before rebuilding'
+              finally:
+                  server.terminate()
+                  server.wait(timeout=20)
+          create_payload(runtime, base/'ollama-models', base/'offline-payload', model='qwen3:1.7b',
+                         runtime_version='0.40.14', archive_sha256='993e83d08c3d13d17c55009a3e2664c8a25445e644aec3a68bef5abb6abce67d')
+          PY
+      - name: Test the real bundled provider with external networking removed
+        if: github.ref_name == 'recovery/mjon-ai-os-stability-20261105'
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s mjon_os/tests -p 'test_*.py' -v
+          # Privileged namespace setup occurs only on this disposable runner.
+          # The production desktop still uses ordinary user services.
+          sudo -E unshare -n "$(command -v python)" scripts/mjon_offline_acceptance.py \
+            --worker --ollama "$RUNNER_TEMP/offline-payload/runtime/bin/ollama" \
+            --models "$RUNNER_TEMP/offline-payload/models" --model qwen3:1.7b \
+            --output "$RUNNER_TEMP/offline-provider-evidence.json"
       - name: Create native live-build tree
         env:
           MJON_CI_TMP: ${{ runner.temp }}
@@ -94,7 +147,9 @@ jobs:
           wheels=list((root/'wheels').glob('dodaios-*.whl'))
           if len(wheels)!=1:
               raise SystemExit(f'Expected one local fork wheel: {wheels}')
-          result=prepare_image(repo_root=Path.cwd(), wheel=wheels[0], destination=root/'mjon-live')
+          payload=root/'offline-payload'
+          result=prepare_image(repo_root=Path.cwd(), wheel=wheels[0], destination=root/'mjon-live',
+                               offline_payload=payload if payload.is_dir() else None)
           print(result)
           PY
       - name: Assemble Debian ISO in disposable privileged builder
@@ -168,6 +223,10 @@ jobs:
           grep -Fq 'MJON_VM_PROOF JARVIS_SERVICE_STABLE' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
           grep -Fq 'MJON_VM_PROOF JARVIS_API_READY' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
           grep -Fq 'MJON_VM_PROOF JARVIS_API_READY' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
+          if [ -d "$MJON_CI_TMP/offline-payload" ]; then
+            grep -Fq 'MJON_VM_PROOF OLLAMA_PAYLOAD_READY' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
+            grep -Fq 'MJON_VM_PROOF OLLAMA_PAYLOAD_READY' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
+          fi
       - name: Upload experimental ISO for virtual-machine testing (not release)
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -180,6 +239,7 @@ jobs:
             ${{ runner.temp }}/mjon-live/boot-records.txt
             ${{ runner.temp }}/mjon-live/boot-bios-serial.txt
             ${{ runner.temp }}/mjon-live/boot-uefi-serial.txt
+            ${{ runner.temp }}/offline-provider-evidence.json
           if-no-files-found: error
           compression-level: 0
           retention-days: 7

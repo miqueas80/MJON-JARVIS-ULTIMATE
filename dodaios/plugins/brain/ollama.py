@@ -50,6 +50,10 @@ from dodaios.brain import local_context
 from dodaios.core import config as cfg
 from dodaios.core.config import OllamaModelOptions
 from dodaios.core.protocols import BrainDelta, BrainRequest
+from mjon_os.ollama_policy import (
+    ENDPOINT, NATIVE_CONTEXT, eligible_models, is_cloud_model, native_http_options,
+    native_mode, physical_memory, require_native_endpoint,
+)
 
 from ._openai_base import stream_complete
 
@@ -202,7 +206,8 @@ def default_server_root() -> str:
     Ollama's own CLI honors ``OLLAMA_HOST`` for both serving and connecting,
     so a user who moved their server declares it exactly once.
     """
-    return normalize_server_root(os.environ.get("OLLAMA_HOST") or DEFAULT_SERVER_ROOT)
+    return normalize_server_root(os.environ.get("OLLAMA_HOST") or
+                                 (ENDPOINT if native_mode() else DEFAULT_SERVER_ROOT))
 
 
 class OllamaBrain:
@@ -269,7 +274,11 @@ class OllamaBrain:
             # Root convention: the stored/resolved value is the SERVER root;
             # ``/v1`` (chat) and ``/api/*`` (discovery) are appended here. A
             # team-proxy target (``…/p/ollama``) follows the same convention.
-            self._server_root = normalize_server_root(ep.base_url or default_server_root())
+            root = normalize_server_root(ep.base_url or default_server_root())
+            require_native_endpoint(root)
+            if native_mode() and ep.via_proxy:
+                raise ValueError("Native offline Ollama cannot use a team proxy.")
+            self._server_root = root
             self._credential = ep.credential
         return self._server_root
 
@@ -285,6 +294,9 @@ class OllamaBrain:
                 base_url=f"{root}/v1",
                 timeout=CLIENT_TIMEOUT,
                 max_retries=0,
+                **({"http_client": httpx.AsyncClient(timeout=CLIENT_TIMEOUT,
+                                                    **native_http_options())}
+                   if native_mode() else {}),
             )
         return self._client
 
@@ -309,7 +321,7 @@ class OllamaBrain:
         answers about the words around it). The user's explicit model pick
         always overrides this.
         """
-        if self._model:
+        if self._model and not native_mode():
             if need_tools:
                 caps = await self._capabilities(self._model, self._resolve_root())
                 if caps is not None:
@@ -328,6 +340,7 @@ class OllamaBrain:
         try:
             async with httpx.AsyncClient(
                 timeout=CLIENT_TIMEOUT, headers=self._native_headers(),
+                **native_http_options(),
             ) as client:
                 resp = await client.get(f"{root}/api/tags")
                 resp.raise_for_status()
@@ -343,8 +356,8 @@ class OllamaBrain:
             m
             for m in models
             if (name := str(m.get("name") or "").strip())
-            and not name.endswith(":cloud")
-            and not m.get("remote")
+            and not is_cloud_model(name)
+            and not any(m.get(key) for key in ("remote", "remote_host", "remote_model"))
             and not is_hidden_alias(name)
         ]
         if not local:
@@ -352,6 +365,14 @@ class OllamaBrain:
                 f"Ollama at {root} has no downloaded models (cloud references "
                 f"do not count) — run: ollama pull {RECOMMENDED_PULL}, then retry."
             )
+        if native_mode():
+            from dodaios.brain.ollama_inventory import same_model
+            inventory = tuple((str(m["name"]).strip(), m.get("size")) for m in local)
+            allowed = eligible_models(inventory, physical_memory())
+            local = [m for m in local if str(m["name"]).strip() in allowed
+                     and (not self._model or same_model(str(m["name"]), self._model))]
+            if not local:
+                raise RuntimeError("No downloaded local model with known size fits the native memory policy.")
         local.sort(key=lambda m: int(m.get("size") or 0))
         for m in local:
             name = str(m.get("name")).strip()
@@ -414,6 +435,7 @@ class OllamaBrain:
         try:
             async with httpx.AsyncClient(
                 timeout=CLIENT_TIMEOUT, headers=self._native_headers(),
+                **native_http_options(),
             ) as client:
                 resp = await client.post(f"{root}/api/show", json={"model": name})
                 resp.raise_for_status()
@@ -581,6 +603,8 @@ class OllamaBrain:
             AUTOMATIC_CONTEXT_FLOOR,
         )
 
+        if native_mode():
+            return NATIVE_CONTEXT
         native = self._native_context.get(model)
         if native is None and model:
             try:
@@ -627,6 +651,9 @@ class OllamaBrain:
         ``num_ctx``) and the automatic size: a model that already asks for
         more than the automatic window must not be shrunk by it.
         """
+        if native_mode():
+            await self._capabilities(model, self._resolve_root())
+            return min(NATIVE_CONTEXT, self._native_context.get(model) or NATIVE_CONTEXT)
         automatic = await self._automatic_context(model)
         return max(automatic, self._declared_context.get(model) or 0)
 
@@ -652,6 +679,7 @@ class OllamaBrain:
         try:
             async with httpx.AsyncClient(
                 timeout=CLIENT_TIMEOUT, headers=self._native_headers(),
+                **native_http_options(),
             ) as client:
                 resp = await client.get(f"{root}/api/tags")
                 resp.raise_for_status()
@@ -721,6 +749,7 @@ class OllamaBrain:
             try:
                 async with httpx.AsyncClient(
                     timeout=CLIENT_TIMEOUT, headers=self._native_headers(),
+                    **native_http_options(),
                 ) as client:
                     resp = await client.get(f"{root}/api/ps")
                     resp.raise_for_status()
@@ -794,6 +823,15 @@ class OllamaBrain:
         brain serves concurrent calls.
         """
         opts = self._model_options(model)
+        if native_mode():
+            requested = self._requested_context_window or (opts.num_ctx if opts else None)
+            if requested and requested > NATIVE_CONTEXT:
+                raise RuntimeError("The native desktop context limit is 2048 tokens; "
+                                   "the request was refused without truncation.")
+            # Disable optional reasoning for bounded CPU probes and short turns.
+            opts = (opts or OllamaModelOptions()).model_copy(
+                update={"think": opts.think if opts and opts.think is not None else False,
+                        "num_thread": min(opts.num_thread or 4, 4) if opts else 4})
         # ``confirmed``: the server is known to run ``planned`` without a
         # profile, because the model itself declares it.
         confirmed = False
@@ -838,7 +876,7 @@ class OllamaBrain:
                     created = True
                     _PROFILE_REFUSED.pop(refused_key, None)
                 except Exception as exc:  # noqa: BLE001 — degrade to the base model, say so
-                    if self._requested_context_window is not None:
+                    if self._requested_context_window is not None or native_mode():
                         # The runtime already budgets against this window.
                         # Sending to the base model would silently serve a
                         # smaller context.

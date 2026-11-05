@@ -8,7 +8,19 @@ export MJON_AI_OS_CONFIG_ROOT="$config_home"
 export JARVIS_DATA_DIR="$data_home"
 export JARVIS_INSTANCE=default
 export MJON_NATIVE_OS=1
+# Applies to any explicitly spawned daemon; an existing system daemon needs
+# its own cloud-disabled configuration and offline acceptance.
+export OLLAMA_NO_CLOUD=1
 engine=/opt/mjon-ai-os/venv/bin/python
+# An offline payload is included only by an explicit image-builder choice.
+# The base image still starts no optional inference engine.
+if [ -f /opt/mjon-ai-os/ollama/manifest.json ]; then
+  export PATH="/opt/mjon-ai-os/ollama/runtime/bin:$PATH"
+  export OLLAMA_MODELS="$HOME/.local/share/mjon-ai-os/ollama-models"
+  if ! systemctl --user start mjon-ollama.service; then
+    echo 'MJON: bundled Ollama failed; keeping the desktop available for diagnosis.' >&2
+  fi
+fi
 "$engine" -m mjon_os.first_boot \
   --template /usr/share/mjon-ai-os/dodaios.toml.example \
   --config "$config_home/dodaios.toml" --data "$data_home"

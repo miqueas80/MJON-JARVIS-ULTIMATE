@@ -42,6 +42,8 @@ class LiveImageTests(unittest.TestCase):
             archive.writestr('mjon_os/ai_fabric.py', '# MJON')
             archive.writestr('mjon_os/ai_center.py', '# MJON')
             archive.writestr('mjon_os/local_inference.py', '# MJON')
+            for module in ('ollama_policy', 'jarvis_probe', 'offline_payload'):
+                archive.writestr(f'mjon_os/{module}.py', '# MJON')
             archive.writestr('dodaios/ui/web/dist/index.html', '<!doctype html><title>MJON</title>')
             for module in ('__init__', 'base', 'chat_tails', 'commands',
                            'meetings', 'progression', 'roster', 'screens', 'settings'):

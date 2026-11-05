@@ -34,6 +34,7 @@ from typing import Any
 import httpx
 
 from dodaios.core.config import OllamaModelOptions
+from mjon_os.ollama_policy import native_http_options, require_native_endpoint
 
 log = logging.getLogger(__name__)
 
@@ -150,7 +151,9 @@ async def ensure_profile(
     if not has_bakeable(opts):
         return base
     alias = profile_name(base, opts)
-    async with httpx.AsyncClient(timeout=_TIMEOUT, transport=transport, headers=headers) as client:
+    require_native_endpoint(root)
+    async with httpx.AsyncClient(timeout=_TIMEOUT, transport=transport, headers=headers,
+                                **native_http_options()) as client:
         try:
             names = await _tag_names(client, root)
         except Exception as exc:
@@ -203,8 +206,10 @@ async def warm(
         return True
     payload = {"model": model, "keep_alive": keep_alive, "stream": False}
     try:
+        require_native_endpoint(root)
         async with httpx.AsyncClient(
             timeout=_TIMEOUT, transport=transport, headers=headers,
+            **native_http_options(),
         ) as client:
             resp = await client.post(f"{root}/api/generate", json=payload)
             resp.raise_for_status()

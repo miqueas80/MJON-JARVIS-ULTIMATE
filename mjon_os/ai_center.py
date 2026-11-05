@@ -16,6 +16,7 @@ from threading import Thread
 from .ai_fabric import HardwareProfile, inspect_modules
 from .doctor import parse_memtotal
 from .local_inference import InferenceUnavailable, OllamaClient
+from .provider_health import diagnose as diagnose_ollama, preload as preload_ollama
 
 
 _LABELS = {
@@ -210,7 +211,7 @@ def run_gui() -> int:
             row.pack_start(name, True, True, 0)
             if module["status"] == "installed_unverified":
                 state = "Detectado · modelo no verificado"
-                style = "mjon-okay"
+                style = "mjon-warn"
             elif module["status"] == "remote_opt_in":
                 state = "Proveedor remoto · requiere autorización"
                 style = "mjon-warn"
@@ -239,6 +240,19 @@ def run_gui() -> int:
     local_page.pack_start(entry, False, False, 0)
     ask_button = Gtk.Button(label="Consultar modelo local")
     local_page.pack_start(ask_button, False, False, 0)
+    provider_controls = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+    diagnose_button = Gtk.Button(label="Verificar proveedor con una respuesta real")
+    preload_button = Gtk.Button(label="Precargar modelo local (5 min)")
+    provider_controls.pack_start(diagnose_button, True, True, 0)
+    provider_controls.pack_start(preload_button, True, True, 0)
+    local_page.pack_start(provider_controls, False, False, 0)
+    note = Gtk.Label(
+        label="Detectar un proveedor o cargar pesos no confirma la IA: "
+              "solo una respuesta real habilita el estado operativo.",
+        xalign=0,
+    )
+    note.set_line_wrap(True)
+    local_page.pack_start(note, False, False, 0)
     answer = Gtk.TextView()
     answer.set_wrap_mode(Gtk.WrapMode.WORD)
     answer.set_editable(False)
@@ -250,7 +264,35 @@ def run_gui() -> int:
     def set_answer(text):
         answer.get_buffer().set_text(text)
         ask_button.set_sensitive(True)
+        diagnose_button.set_sensitive(True)
+        preload_button.set_sensitive(True)
         return False
+
+    def start_provider_action(operation):
+        ask_button.set_sensitive(False)
+        diagnose_button.set_sensitive(False)
+        preload_button.set_sensitive(False)
+        answer.get_buffer().set_text("Comprobando Ollama local...")
+
+        def worker():
+            try:
+                if operation == "preload":
+                    status = preload_ollama(OllamaClient())
+                    text = "Precarga: " + status.detail + " Modelo: " + (status.model or "-")
+                else:
+                    status = diagnose_ollama(OllamaClient(), verify_generation=True)
+                    text = ("IA operativa: " if status.ready else "Proveedor no operativo: ")
+                    text += status.detail
+                    if status.model:
+                        text += " Modelo: " + status.model
+            except (InferenceUnavailable, ValueError) as exc:
+                text = "Proveedor no operativo: " + str(exc)
+            GLib.idle_add(set_answer, text)
+
+        Thread(target=worker, daemon=True).start()
+
+    diagnose_button.connect("clicked", lambda _button: start_provider_action("verify"))
+    preload_button.connect("clicked", lambda _button: start_provider_action("preload"))
 
     def on_ask(_button):
         prompt = entry.get_text().strip()

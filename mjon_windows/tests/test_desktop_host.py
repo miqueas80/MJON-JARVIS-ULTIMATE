@@ -117,6 +117,18 @@ class DesktopHostTests(unittest.TestCase):
         self.assertEqual(status, 400)
         chat.assert_not_called()
 
+    def test_browser_recovery_is_loopback_only_and_explicit(self):
+        from unittest.mock import Mock
+        from mjon_windows.desktop_host import browser_fallback
+        opener = Mock(return_value=True)
+        notifier = Mock()
+        browser_fallback("http://127.0.0.1:53721/", opener=opener, notifier=notifier)
+        opener.assert_called_once_with("http://127.0.0.1:53721/")
+        notifier.assert_called_once()
+        with self.assertRaises(ValueError):
+            browser_fallback("https://unknown.example/", opener=opener, notifier=notifier)
+        self.assertEqual(opener.call_count, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

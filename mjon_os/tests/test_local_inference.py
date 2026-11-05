@@ -73,6 +73,27 @@ class OllamaClientTests(unittest.TestCase):
         with self.assertRaisesRegex(InferenceUnavailable, "memoria"):
             client.ask("hola", model="oversized")
 
+    def test_cloud_model_tag_is_never_used_for_an_offline_chat(self):
+        calls = []
+        def responder(request, **kw):
+            calls.append(request.full_url)
+            if request.full_url.endswith("/api/tags"):
+                return FakeHTTPResponse({"models": [
+                    {"name": "gemma4:cloud", "size": 300000},
+                    {"name": "local:tiny", "size": 700000},
+                ]})
+            return FakeHTTPResponse({"message": {"content": "local response"}})
+        client = OllamaClient(opener=responder, ram_bytes=8 * 1024**3)
+        self.assertEqual(client.ask("hola"), "local response")
+        with self.assertRaisesRegex(InferenceUnavailable, "cloud"):
+            client.ask("hola", model="gemma4:cloud")
+        self.assertEqual(calls.count("http://127.0.0.1:11434/api/chat"), 1)
+
+    def test_local_requests_disable_http_redirect_following(self):
+        from mjon_os.local_inference import _NoRedirect
+        handler = _NoRedirect()
+        self.assertIsNone(handler.redirect_request(None, None, None, None, None, None))
+
     def test_refuses_unbounded_input_or_remote_endpoints(self):
         with self.assertRaises(ValueError):
             OllamaClient(endpoint="http://8.8.8.8:11434")

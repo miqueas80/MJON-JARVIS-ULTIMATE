@@ -1,0 +1,15 @@
+[Unit]
+Description=MJON AI OS - opt-in local Ollama model warmup
+Documentation=https://github.com/miqueas80/MJON-JARVIS-ULTIMATE
+After=graphical-session.target
+ConditionPathExists=%h/.config/mjon-ai-os/ollama-preload.json
+
+[Service]
+Type=oneshot
+ExecStart=/opt/mjon-ai-os/venv/bin/python -m mjon_os.provider_health --startup-config %h/.config/mjon-ai-os/ollama-preload.json
+TimeoutStartSec=110
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=default.target

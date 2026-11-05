@@ -48,6 +48,34 @@ pwsh -NoProfile -File packaging/windows/build-mjon-win11-media.ps1 -WindowsIso '
 
 Si pasa, ejecutá el mismo comando **sin `-PreflightOnly`**. El constructor no sobrescribe el original. Verificá el hash resultante en consola y probá la ISO **primero en una VM UEFI**. Ninguna prueba automatizada de preflight sustituye una instalación real.
 
+## Alternativa para Windows X-Lite: sin unidad de DVD virtual
+
+Si `Get-DiskImage | Get-Volume` no muestra una letra, no intentes reparar a ciegas la instalación de Windows ni ejecutes `setup.exe`. Extraé la ISO original localmente con 7-Zip (https://www.7-zip.org/), conservando la ISO intacta y su SHA256.
+
+```powershell
+$iso = "$env:USERPROFILE\Downloads\Windows11_Client_x64_es-es_26300_9457.iso"
+$zip = "$env:ProgramFiles\7-Zip\7z.exe"
+New-Item -ItemType Directory -Force -Path 'C:\MJON\WindowsSource' | Out-Null
+& $zip x $iso '-oC:\MJON\WindowsSource' -y
+if ($LASTEXITCODE -ne 0) { throw 'La extracción falló.' }
+Get-ChildItem 'C:\MJON\WindowsSource\sources\install.*'
+```
+
+La carpeta de origen y su contenido deben permanecer separados de la carpeta de salida, que también debe existir. El constructor mantiene el archivo original ISO como fuente para el checksum y verifica la firma de Microsoft de `setup.exe` en la carpeta extraída, pero salta el montaje por Windows usando el parámetro `-ExtractedSourceDirectory`. La verificación del nuevo medio se hace con 7-Zip sin unidad virtual. Una firma válida de `setup.exe` no autentica por sí sola toda la ISO.
+
+```powershell
+New-Item -ItemType Directory -Force -Path 'C:\MJON\out' | Out-Null
+pwsh -NoProfile -File packaging/windows/build-mjon-win11-media.ps1 `
+ -WindowsIso "$env:USERPROFILE\Downloads\Windows11_Client_x64_es-es_26300_9457.iso" `
+ -ExpectedWindowsSha256 '9828703784880421E6602504DFD99064E4CB739CC9B20ABA22E3934372A14F9A' `
+ -ExtractedSourceDirectory 'C:\MJON\WindowsSource' `
+ -PayloadDirectory 'C:\MJON\package' `
+ -OutputIso 'C:\MJON\out\MJON-Win11-Integration-Preview.iso' `
+ -PreflightOnly
+```
+
+Quitá `-PreflightOnly` solo después de completar la preparación de `C:\MJON\package`, instalar Windows ADK, revisar el código y superar la validación. La construcción todavía es una **vista previa de integración**; no instalar ni lanzar en hardware principal sin antes probar arranque en VM UEFI y los requisitos de Windows.
+
 ## GitHub Actions
 
 La CI sobre `windows-latest` solo ejecuta pruebas de seguridad y análisis sintáctico del constructor. No descarga imágenes Windows.

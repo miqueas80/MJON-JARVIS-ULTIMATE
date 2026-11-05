@@ -27,6 +27,9 @@ class FakeClient:
             raise InferenceUnavailable("Servidor caído")
         return tuple(self.inventory)
 
+    def models(self):
+        return tuple(name for name, _size in self._model_inventory())
+
     def _request(self, route, *, body=None, timeout=8):
         self.requests.append((route, body))
         if route == "/api/generate":

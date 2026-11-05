@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#081225">
+  <title>MJON AI OS · Personal Intelligence System</title>
+  <link rel="stylesheet" href="/style.css">
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <div id="shell" class="shell">
+    <aside class="sidebar" aria-label="Navegación principal">
+      <div class="brand"><span class="brand-mark">M</span><span><strong>MJON TECH</strong><small>MJON <em>AI</em> OS</small><span class="tagline">Personal Intelligence System</span></span></div>
+      <div class="nav-rule"></div>
+      <nav id="navigation">
+        <button type="button" class="nav active" data-page="inicio"><span class="nav-icon">⌂</span>Inicio</button>
+        <button type="button" class="nav" data-page="jarvis"><span class="nav-icon">✧</span>JARVIS</button>
+        <button type="button" class="nav" data-page="modelos"><span class="nav-icon">◎</span>Modelos IA</button>
+        <button type="button" class="nav" data-page="agentes"><span class="nav-icon">◇</span>Agentes</button>
+        <button type="button" class="nav" data-page="studio"><span class="nav-icon">⌘</span>Studio</button>
+        <button type="button" class="nav" data-page="proyectos"><span class="nav-icon">▤</span>Proyectos</button>
+        <button type="button" class="nav" data-page="aplicaciones"><span class="nav-icon">▦</span>Aplicaciones</button>
+        <button type="button" class="nav" data-page="configuracion"><span class="nav-icon">⚙</span>Configuración</button>
+        <button type="button" class="nav" data-page="seguridad"><span class="nav-icon">⬡</span>Seguridad</button>
+        <button type="button" class="nav" data-page="rendimiento"><span class="nav-icon">▰</span>Rendimiento</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="companion"><span class="companion-emblem">✧</span><div><strong>Nexus <span class="dot"></span></strong><small>Asistente del sistema · sin conectar</small></div></div>
+        <small class="sideline">MJON Windows Edition · Local First</small>
+      </div>
+    </aside>
+    <div class="workarea">
+      <header class="topbar">
+        <label class="searchbox"><span aria-hidden="true">⌕</span><input type="search" id="quick-search" placeholder="Buscar, pedir o ejecutar... (Ctrl + K)" autocomplete="off" aria-label="Buscar en MJON"><span aria-hidden="true">⌘ K</span></label>
+        <div class="systembar"><span class="state-light"></span><span id="connection-state">Conectando</span><span class="pill">LOCAL</span><time id="clock">--:--</time></div>
+      </header>
+      <main id="content">
+        <section class="page active" id="page-inicio">
+          <div class="hero"><div class="orbital" aria-hidden="true"><span></span></div><div class="hero-copy"><p class="eyebrow">PERSONAL INTELLIGENCE SYSTEM</p><h1>MJON <em>AI</em> OS</h1><p>Tu entorno de inteligencia local, integrado con Windows.</p><p class="small-note">Sin modelos ficticios, sin nube automática, sin cambios del sistema sin autorización.</p><button type="button" class="primary" data-page="jarvis">Conversar con JARVIS</button></div></div>
+          <div class="subheader"><h2>Centro de mando</h2><span id="overview-hint">Esperando diagnóstico local</span></div>
+          <div class="tiles"><button class="tile" data-page="jarvis"><span>✧</span><b>JARVIS</b><small>Asistente local</small></button><button class="tile" data-page="modelos"><span>◎</span><b>Modelos IA</b><small>Verificar Ollama</small></button><button class="tile" data-page="agentes"><span>◇</span><b>Agentes</b><small>Módulos detectados</small></button><button class="tile" data-page="studio"><span>⌘</span><b>Studio</b><small>Herramientas técnicas</small></button></div>
+          <div class="dashboard-row"><article class="panel"><h3>Estado del sistema <span class="small-dot"></span></h3><div class="metric"><span>Memoria física</span><strong id="home-ram">Sin datos</strong></div><div class="metric"><span>Almacenamiento libre</span><strong id="home-disk">Sin datos</strong></div><div class="metric"><span>Motor Ollama</span><strong id="home-ollama">Sin comprobar</strong></div></article><article class="panel"><h3>Acciones rápidas</h3><button class="action" data-page="configuracion">⚙ <span>Configuración de Windows</span> ›</button><button class="action" data-page="rendimiento">▰ <span>Diagnóstico del equipo</span> ›</button><button class="action" data-page="seguridad">⬡ <span>Controles de seguridad</span> ›</button></article></div>
+        </section>
+        <section class="page" id="page-jarvis">
+          <div class="pageheading"><p class="eyebrow">ASISTENTE CENTRAL</p><h1>Conversá con <em>JARVIS</em></h1><p>Consultas reales a modelos descargados en Ollama local. No se envían preguntas a la nube.</p></div>
+          <div class="dashboard-row jarvis-layout"><article class="panel"><div class="panel-header"><h3>Conversación local</h3><span class="pill">127.0.0.1</span></div><div class="messages" id="messages" role="log" aria-live="polite"><p class="hint">Seleccioná un modelo local antes de enviar un mensaje.</p></div><form id="chat-form"><label for="chat-model">Modelo instalado</label><select id="chat-model" required><option value="">Buscando modelos…</option></select><label for="chat-prompt">Tu mensaje</label><textarea id="chat-prompt" rows="3" maxlength="1024" placeholder="Escribí una consulta para JARVIS" required></textarea><button class="primary" type="submit" id="send-chat">Consultar modelo local</button></form></article><article class="panel sidebar-panel"><h3>Condiciones de ejecución</h3><p>Motor: Ollama local.</p><p>Respuestas verificadas solamente después de una generación real.</p><p>Si no hay modelo instalado o el motor no responde, no se simulará ninguna respuesta.</p><button class="action" data-page="modelos">◎ <span>Administrar modelos</span> ›</button></article></div>
+        </section>
+        <section class="page" id="page-modelos"><div class="pageheading"><p class="eyebrow">MOTORES DE INFERENCIA</p><h1>Modelos <em>IA</em></h1><p>Inventario de modelos descargados y visibles en Ollama. Detectado no significa probado.</p></div><article class="panel"><div class="panel-header"><h3>Modelos disponibles</h3><button id="refresh-models" class="outline" type="button">Actualizar</button></div><p id="models-reason" class="muted">Comprobando Ollama...</p><div id="model-list" class="module-list"></div><button type="button" class="action" data-page="jarvis">✧ <span>Probar una generación con JARVIS</span> ›</button></article></section>
+        <section class="page" id="page-agentes"><div class="pageheading"><p class="eyebrow">CAPACIDADES LOCALES</p><h1>Agentes y <em>módulos</em></h1><p>Estado observado del software. No se inicia ningún agente automáticamente.</p></div><article class="panel"><h3>Módulos detectados</h3><div class="module-list" id="agent-list"><p class="muted">Cargando catálogo local…</p></div></article></section>
+        <section class="page" id="page-studio"><div class="pageheading"><p class="eyebrow">ENTORNO TÉCNICO</p><h1>MJON <em>Studio</em></h1><p>Herramientas disponibles en tu Windows, sin ejecución de comandos no autorizados.</p></div><article class="panel"><h3>Herramientas de desarrollo detectadas</h3><div id="studio-list" class="module-list"></div><p class="muted">El editor integrado y los agentes de programación todavía no están habilitados. No se simula su funcionamiento.</p></article></section>
+        <section class="page" id="page-proyectos"><div class="pageheading"><p class="eyebrow">ESPACIO DE TRABAJO</p><h1>Mis <em>proyectos</em></h1><p>Las carpetas personales no se inspeccionan sin una acción explícita.</p></div><article class="panel"><h3>Protección de datos</h3><p>Esta versión no recopila archivos del usuario ni sincroniza proyectos con servicios externos.</p><p class="muted">La gestión de proyectos sigue pendiente de integración.</p></article></section>
+        <section class="page" id="page-aplicaciones"><div class="pageheading"><p class="eyebrow">ECOSISTEMA LOCAL</p><h1>Aplicaciones</h1><p>Componentes detectados, sin instalaciones ni actualizaciones automáticas.</p></div><article class="panel"><h3>Aplicaciones y servicios opcionales</h3><div id="app-list" class="module-list"></div></article></section>
+        <section class="page" id="page-configuracion"><div class="pageheading"><p class="eyebrow">PREFERENCIAS DEL SISTEMA</p><h1>Configuración <em>del sistema</em></h1><p>Acceso a controles oficiales de Windows. No se modifican configuraciones en segundo plano.</p></div><div class="dashboard-row"><article class="panel"><h3>Categorías</h3><div class="settings-grid" id="settings-grid">
+          <button type="button" data-settings="display">▣ <span>Pantalla</span></button>
+          <button type="button" data-settings="sound">◖ <span>Audio y voz</span></button>
+          <button type="button" data-settings="wifi">⌁ <span>Conectividad Wi-Fi</span></button>
+          <button type="button" data-settings="bluetooth">◇ <span>Bluetooth</span></button>
+          <button type="button" data-settings="power">⚡ <span>Inicio y energía</span></button>
+          <button type="button" data-settings="storage">▤ <span>Almacenamiento</span></button>
+          <button type="button" data-settings="apps">▦ <span>Aplicaciones</span></button>
+          <button type="button" data-settings="privacy">⬡ <span>Privacidad y seguridad</span></button>
+          <button type="button" data-settings="updates">↻ <span>Actualizaciones</span></button>
+        </div></article><article class="panel sidebar-panel"><h3>Modo de trabajo</h3><p>Configuración de Windows sin elevar permisos.</p><p>No hay inicio automático de modelos pesados, descarga de pesos ni reinicios inesperados.</p></article></div></section>
+        <section class="page" id="page-seguridad"><div class="pageheading"><p class="eyebrow">PERMISOS Y PRIVACIDAD</p><h1>Seguridad <em>MJON</em></h1><p>La interfaz solo escucha en tu computadora y usa el modelo local que elegís.</p></div><article class="panel"><div class="security-grid"><div><b>Conexión</b><strong>127.0.0.1</strong><small>Sin puertos en la red local</small></div><div><b>Servicios externos</b><strong>Inactivos</strong><small>No hay respaldo automático en la nube</small></div><div><b>Acciones del sistema</b><strong>Con autorización</strong><small>Configuración limitada a opciones permitidas</small></div></div><button class="action" type="button" data-settings="privacy">⬡ <span>Abrir privacidad de Windows</span> ›</button></article></section>
+        <section class="page" id="page-rendimiento"><div class="pageheading"><p class="eyebrow">DIAGNÓSTICO REAL</p><h1>Rendimiento <em>del equipo</em></h1><p>Lecturas del sistema operativo; sin métricas estimadas ni porcentajes inventados.</p></div><article class="panel"><div class="panel-header"><h3>Resumen de hardware</h3><button id="refresh-health" type="button" class="outline">Actualizar</button></div><div class="metric"><span>Sistema operativo</span><strong id="health-os">Sin datos</strong></div><div class="metric"><span>Arquitectura</span><strong id="health-arch">Sin datos</strong></div><div class="metric"><span>RAM instalada</span><strong id="health-ram">Sin datos</strong></div><div class="metric"><span>Disco libre</span><strong id="health-disk">Sin datos</strong></div></article></section>
+      </main>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+      <footer class="dock"><button type="button" data-page="inicio" title="Inicio">⌂</button><button type="button" data-page="jarvis" title="JARVIS">✧</button><button type="button" data-page="modelos" title="Modelos IA">◎</button><button type="button" data-page="configuracion" title="Configuración">⚙</button><span class="dock-divider"></span><span class="dock-name">MJON AI OS · Windows Edition</span><time id="dock-clock">--:--</time></footer>
+    </div>
+  </div>
+</body>
+</html>

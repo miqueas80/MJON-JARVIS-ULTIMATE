@@ -268,7 +268,7 @@ async def check_once(
         model = roles.get("chat") or roles.get("deep") or roles.get("tools_screen") or ""
         used, why = (in_use or _default_in_use)(cfg)
         if not model:
-            status, reason = "ok", ""
+            status, reason = "unknown", "No chat model has been verified."
         elif not used:
             # A generation LOADS the model, and it stays resident behind its
             # keep-alive: a 14B chat pick put ~11 GB on the accelerator and in
@@ -278,7 +278,9 @@ async def check_once(
             # the badge instead of autostart. A server that answers is all the
             # badge can honestly claim for picks nothing uses.
             log.debug("health monitor: %s not generated — %s", model, why)
-            status, reason = "ok", ""
+            # A server-only probe proves HTTP availability, not inference.
+            # Never publish a healthy-model verdict for an unused model.
+            status, reason = "unknown", "Model configured but not checked because it is not in use."
         else:
             try:
                 result = await asyncio.wait_for(

@@ -64,7 +64,9 @@ def diagnose(client: OllamaClient, *, model: str | None = None,
         chosen = _choose_model(client, model)
         loaded = chosen in _loaded_models(client)
         if verify_generation:
-            client.ask("Respondé brevemente con OK.", model=chosen)
+            reply = client.ask("Respondé brevemente con OK.", model=chosen)
+            if not isinstance(reply, str) or not reply.strip():
+                raise InferenceUnavailable("El proveedor no devolvió texto válido.")
             return ProviderStatus("ready", chosen, "Generación local real comprobada.")
         if loaded:
             return ProviderStatus("loaded_unverified", chosen,

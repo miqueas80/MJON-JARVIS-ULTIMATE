@@ -99,10 +99,23 @@ Herramientas opcionales: usar PowerShell despues de instalar Windows:
 No ejecuta herramientas automaticamente ni modifica la instalacion.
 No redistribuir imagenes Windows sin los derechos correspondientes.
 '@ | Set-Content -LiteralPath (Join-Path $mjon 'LEEME-MJON.txt') -Encoding UTF8
+ # Microsoft recommends ordering the boot-critical files for media > 4.5 GB.
+ # Use relative Windows paths, encoded as ASCII, one file per line.
+ $bootOrder = Join-Path $stageRoot 'boot-order.txt'
+ $priority = @(
+  'boot\bcd', 'boot\boot.sdi', 'boot\bootfix.bin',
+  'boot\etfsboot.com', 'boot\memtest.efi',
+  'efi\microsoft\boot\bcd', 'efi\boot\bootx64.efi',
+  'efi\microsoft\boot\efisys.bin', 'sources\boot.wim'
+ )
+ $present = @($priority | Where-Object {
+  Test-Path -LiteralPath (Join-Path $staging $_) -PathType Leaf
+ })
+ [System.IO.File]::WriteAllLines($bootOrder, [string[]]$present, [System.Text.Encoding]::ASCII)
  $bios = Join-Path $staging 'boot\etfsboot.com'
  $uefi = Join-Path $staging 'efi\microsoft\boot\efisys.bin'
  $boot = "-bootdata:2#p0,e,b$bios#pEF,e,b$uefi"
- & $oscdimg -m -o -u2 -udfver102 -lMJON_WIN11_X64 $boot $staging $dest
+ & $oscdimg -m -o -u2 -udfver102 -lMJON_WIN11_X64 $boot "-yo$bootOrder" $staging $dest
  if ($LASTEXITCODE -ne 0) { throw "oscdimg falló con $LASTEXITCODE" }
  RequireFile $dest
  Mount-DiskImage -ImagePath $dest -ErrorAction Stop | Out-Null

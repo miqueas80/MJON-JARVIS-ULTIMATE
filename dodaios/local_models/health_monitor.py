@@ -52,6 +52,8 @@ GENERATION_CAP_S = 30.0
 MIN_INTERVAL_S = 60.0
 
 HEALTH_FILE_NAME = "local_models_health.json"
+# Old healthy records could mean an HTTP-only check without generation.
+_HEALTH_EVIDENCE_VERSION = 2
 
 ProbeFn = Callable[[str], Awaitable[dict[str, Any]]]
 GenerateFn = Callable[[Any, str], Awaitable[Any]]
@@ -115,7 +117,16 @@ def load_last_report() -> dict[str, Any] | None:
     except (OSError, ValueError):
         log.info("local-models: health file %s unreadable", path, exc_info=True)
         return None
-    return payload if isinstance(payload, dict) else None
+    if not isinstance(payload, dict):
+        return None
+    if payload.get("status") == "ok" and payload.get("health_evidence_version") != _HEALTH_EVIDENCE_VERSION:
+        # A pre-fix green entry did not prove generation and must not persist
+        # across an OS update as an apparently healthy local model.
+        payload = dict(payload)
+        payload["status"] = "unknown"
+        payload["reason"] = "A fresh model generation check is required."
+        payload["last_ok"] = None
+    return payload
 
 
 def read_health_record() -> dict[str, Any]:
@@ -172,6 +183,7 @@ def write_health_record(status: str, reason: str, *, checked_at: str | None = No
     payload = _without_retired_roles(previous)
     payload["status"] = status
     payload["reason"] = reason
+    payload["health_evidence_version"] = _HEALTH_EVIDENCE_VERSION
     payload["checked_at"] = stamp
     payload["since"] = (
         previous.get("since")
@@ -547,6 +559,8 @@ async def verify_setup(
         reason = f"{who}: {failed['detail']}" if failed["detail"] else f"{who} failed."
     elif not roles:
         status, reason = "needs_setup", "Ollama runs, but no role is configured."
+    elif not chat_model:
+        status, reason = "unknown", "No chat model has been verified."
     else:
         status, reason = "ok", ""
     if persist:

@@ -17,8 +17,12 @@ class FakeClient:
         self.failure = failure
         self.answer = answer
         self.requests = []
+        self.startup_failures = 0
 
     def _model_inventory(self):
+        if self.startup_failures:
+            self.startup_failures -= 1
+            raise InferenceUnavailable("Servidor no disponible todavía")
         if self.failure == "offline":
             raise InferenceUnavailable("Servidor caído")
         return tuple(self.inventory)
@@ -112,6 +116,46 @@ class ProviderHealthTests(unittest.TestCase):
             self.assertEqual(preload_from_config(path, client=client).state, "disabled")
             path.write_text(json.dumps({"enabled": True, "model": "small:latest"}))
             self.assertEqual(preload_from_config(path, client=client).state, "loaded_unverified")
+
+    def test_preload_requires_known_disk_size_under_ram_budget(self):
+        with self.assertRaisesRegex(InferenceUnavailable, "size"):
+            preload(FakeClient(models=[("unknown", None)]), model="unknown")
+
+    def test_startup_waits_for_local_server_without_downloading_anything(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "ollama-preload.json"
+            path.write_text(json.dumps({"enabled": True, "model": "small:latest"}))
+            client = FakeClient()
+            client.startup_failures = 2
+            slept = []
+            state = preload_from_config(
+                path, client=client, wait_attempts=3, pause_s=0.1, sleeper=slept.append
+            )
+            self.assertEqual(state.state, "loaded_unverified")
+            self.assertEqual(slept, [0.1, 0.1])
+            self.assertNotIn("/api/pull", [route for route, _ in client.requests])
+
+    def test_startup_retries_are_finite_when_ollama_never_responds(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "ollama-preload.json"
+            path.write_text(json.dumps({"enabled": True, "model": "small:latest"}))
+            client = FakeClient(failure="offline")
+            slept = []
+            with self.assertRaisesRegex(InferenceUnavailable, "Servidor"):
+                preload_from_config(
+                    path, client=client, wait_attempts=3, pause_s=0.1, sleeper=slept.append
+                )
+            self.assertEqual(slept, [0.1, 0.1])
+            self.assertNotIn("/api/generate", [route for route, _ in client.requests])
+
+    def test_unconfigured_preload_does_not_wait_or_create_client(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "ollama-preload.json"
+            path.write_text(json.dumps({"enabled": False}))
+            slept = []
+            result = preload_from_config(path, wait_attempts=3, sleeper=slept.append)
+            self.assertEqual(result.state, "disabled")
+            self.assertEqual(slept, [])
 
     def test_invalid_keep_alive_rejected(self):
         with self.assertRaises(ValueError):

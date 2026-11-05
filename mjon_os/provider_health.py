@@ -10,7 +10,8 @@ from dataclasses import asdict, dataclass
 import json
 from pathlib import Path
 import sys
-from typing import Any
+import time
+from typing import Any, Callable
 
 from .local_inference import InferenceUnavailable, OllamaClient
 
@@ -38,9 +39,11 @@ def _choose_model(client: OllamaClient, requested: str | None) -> str:
         raise InferenceUnavailable("El modelo configurado no está descargado en Ollama.")
     budget = int(client._ram_bytes * 0.4) if client._ram_bytes else None
     eligible = [name for name, size in available
-                if budget is None or size is None or size <= budget]
+                if budget is None or (size is not None and size <= budget)]
     if requested is not None:
         if requested not in eligible:
+            if budget is not None and models[requested] is None:
+                raise InferenceUnavailable("The model size is unknown; refusing to preload on limited RAM.")
             raise InferenceUnavailable("El modelo supera el límite conservador de RAM.")
         return requested
     if not eligible:
@@ -94,8 +97,16 @@ def preload(client: OllamaClient, *, model: str | None = None,
                           "Modelo precargado; realizá una generación para comprobar el proveedor.")
 
 
-def preload_from_config(config_file: Path, *, client: OllamaClient | None = None) -> ProviderStatus:
-    """Safe startup: explicit user consent and exact locally installed model."""
+def preload_from_config(
+    config_file: Path, *, client: OllamaClient | None = None,
+    wait_attempts: int = 1, pause_s: float = 1.0,
+    sleeper: Callable[[float], None] = time.sleep,
+) -> ProviderStatus:
+    """Opt-in startup waits a bounded time for an already-managed local server.
+
+    The user service never starts Ollama or downloads any model. Waiting for
+    loopback readiness handles races with a separate system-level daemon.
+    """
     if not config_file.exists():
         return ProviderStatus("disabled", detail="No hay configuración de precarga.")
     if config_file.is_symlink() or not config_file.is_file():
@@ -109,7 +120,20 @@ def preload_from_config(config_file: Path, *, client: OllamaClient | None = None
     keep_alive = config.get("keep_alive", "5m")
     if not isinstance(keep_alive, str):
         raise ValueError("keep_alive inválido.")
-    return preload(client or OllamaClient(), model=model.strip(), keep_alive=keep_alive)
+    if not isinstance(wait_attempts, int) or not 1 <= wait_attempts <= 10:
+        raise ValueError("wait_attempts must be between 1 and 10.")
+    if not isinstance(pause_s, (int, float)) or not 0 <= pause_s <= 3:
+        raise ValueError("pause_s must be between 0 and 3 seconds.")
+    local_client = client or OllamaClient()
+    for attempt in range(wait_attempts):
+        try:
+            local_client.models()
+            break
+        except InferenceUnavailable:
+            if attempt + 1 == wait_attempts:
+                raise
+            sleeper(float(pause_s))
+    return preload(local_client, model=model.strip(), keep_alive=keep_alive)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -123,7 +147,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         if args.startup_config:
-            status = preload_from_config(args.startup_config)
+            status = preload_from_config(args.startup_config, wait_attempts=5, pause_s=2)
         elif args.preload:
             status = preload(OllamaClient(), model=args.model, keep_alive=args.keep_alive)
         else:

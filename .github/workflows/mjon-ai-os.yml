@@ -9,6 +9,8 @@ on:
       - 'mjon_jarvis/**'
       - 'setup.py'
       - 'dodaios/core/config.py'
+      - 'dodaios/brain/healthcheck.py'
+      - 'dodaios/local_models/health_monitor.py'
       - '.github/workflows/mjon-ai-os.yml'
   workflow_dispatch:
 

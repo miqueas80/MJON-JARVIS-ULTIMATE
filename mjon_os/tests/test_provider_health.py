@@ -67,6 +67,21 @@ class ProviderHealthTests(unittest.TestCase):
         self.assertEqual(status.state, "unavailable")
         self.assertIn("proveedor", status.detail)
 
+    def test_empty_generation_is_never_healthy(self):
+        status = diagnose(FakeClient(loaded=["small:latest"], answer=""),
+                          verify_generation=True)
+        self.assertFalse(status.ready)
+
+    def test_optional_boot_service_never_forces_server_or_model_download(self):
+        root = Path(__file__).resolve().parents[1]
+        unit = (root / "live/config/includes.chroot/usr/lib/systemd/user/"
+                "mjon-ollama-preload.service").read_text(encoding="utf-8")
+        self.assertIn("ConditionPathExists=", unit)
+        self.assertIn("--startup-config", unit)
+        self.assertIn("NoNewPrivileges=yes", unit)
+        self.assertNotIn("ollama pull", unit)
+        self.assertNotIn("curl", unit)
+
     def test_offline_server_and_empty_catalog_do_not_look_healthy(self):
         self.assertFalse(diagnose(FakeClient(failure="offline")).ready)
         self.assertFalse(diagnose(FakeClient(models=[])).ready)

@@ -65,6 +65,19 @@ jobs:
           python -m unittest discover -s mjon_os/tests -p 'test_*.py' -v
           sh -n mjon_os/live/config/includes.chroot/usr/local/bin/mjon-vm-proof
           sh -n mjon_os/live/config/includes.chroot/usr/local/bin/mjon-control-center
+      - name: Verify offline provider and stream-readiness contracts
+        run: |
+          python - <<'PY'
+          from mjon_os.local_inference import is_cloud_model
+          from mjon_os.provider_health import ProviderStatus
+          from dodaios.brain.healthcheck import BrainHealthChecker
+          assert is_cloud_model("gemma4:cloud")
+          assert is_cloud_model("legacy-remote-cloud")
+          assert not is_cloud_model("local:tiny")
+          assert not ProviderStatus("loaded_unverified", "local:tiny").ready
+          assert ProviderStatus("ready", "local:tiny").ready
+          assert BrainHealthChecker
+          PY
       - name: Build the modified Dodaios engine wheel
         run: |
           python -m pip install --disable-pip-version-check 'setuptools>=84.1.0' wheel build

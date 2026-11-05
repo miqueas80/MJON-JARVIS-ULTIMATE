@@ -19,6 +19,12 @@ language = "auto"
 data_dir = "./data" # original
 [autostart]
 enabled = true
+[brain]
+primary = "gemini"
+fallback = "gemini"
+deep_brain = "gemini"
+routing_provider = "gemini"
+routing_model = "gemini-3.5-flash"
 [other]
 enabled = true
 '''
@@ -34,6 +40,11 @@ class FirstBootTests(unittest.TestCase):
         self.assertEqual(decoded['memory']['data_dir'], str(data))
         self.assertEqual(decoded['stt']['language'], 'es')
         self.assertFalse(decoded['autostart']['enabled'])
+        self.assertEqual(decoded['brain']['primary'], 'ollama')
+        self.assertEqual(decoded['brain']['fallback'], 'ollama')
+        self.assertEqual(decoded['brain']['deep_brain'], 'ollama')
+        self.assertEqual(decoded['brain']['routing_provider'], 'ollama')
+        self.assertEqual(decoded['brain']['routing_model'], '')
 
 
     def test_personalization_preserves_other_fields_and_sets_jarvis(self):
@@ -45,6 +56,9 @@ class FirstBootTests(unittest.TestCase):
         self.assertEqual(fields['memory']['data_dir'], str(data_directory))
         self.assertFalse(fields['autostart']['enabled'])
         self.assertTrue(fields['other']['enabled'])
+        self.assertEqual(fields['brain']['primary'], 'ollama')
+        self.assertEqual(fields['brain']['routing_provider'], 'ollama')
+        self.assertEqual(fields['brain']['routing_model'], '')
 
     def test_config_creation_is_private_and_writable(self):
         with tempfile.TemporaryDirectory() as directory:

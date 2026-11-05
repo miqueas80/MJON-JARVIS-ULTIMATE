@@ -11,6 +11,7 @@ param(
  [Parameter(Mandatory=$true)][string]$ExpectedWindowsSha256,
  [Parameter(Mandatory=$true)][string]$PayloadDirectory,
  [Parameter(Mandatory=$true)][string]$OutputIso,
+ [string]$ExtractedSourceDirectory,
  [switch]$PreflightOnly
 )
 Set-StrictMode -Version Latest
@@ -34,6 +35,35 @@ function RootOfIso([string]$path) {
  if (-not $v) { throw 'La ISO montada no tiene letra de unidad.' }
  return "$($v.DriveLetter):\"
 }
+function GetSevenZip {
+ $names = @('7z.exe','7zz.exe','7za.exe')
+ foreach ($name in $names) {
+  $command = Get-Command $name -ErrorAction SilentlyContinue
+  if ($command) { return $command.Source }
+ }
+ $path = Join-Path $env:ProgramFiles '7-Zip\7z.exe'
+ if (Test-Path -LiteralPath $path -PathType Leaf) { return $path }
+ throw 'Falta 7-Zip. Instalá 7-Zip desde https://www.7-zip.org/ para comprobar la ISO sin unidad virtual.'
+}
+function VerifyOutputWith7Zip([string]$isoFile, [string]$expectedHash, [string]$temporaryDir) {
+ $zip = GetSevenZip
+ # 7-Zip inspects the ISO filesystem without relying on mounted CD-ROM devices.
+ $listing = & $zip l -slt $isoFile
+ if ($LASTEXITCODE -ne 0) { throw '7-Zip no pudo leer la ISO resultante.' }
+ $entries = @($listing | Where-Object { $_ -match '^Path = ' } |
+  ForEach-Object { $_.Substring(7).Replace('/','\').ToLowerInvariant() })
+ foreach ($name in @('setup.exe','sources\boot.wim','mjon\mjon-windows-tools.exe')) {
+  if ($entries -notcontains $name) { throw "Falta $name en la ISO de salida." }
+ }
+ $verifyFolder = Join-Path $temporaryDir 'verified-file'
+ New-Item -ItemType Directory -Force -Path $verifyFolder | Out-Null
+ & $zip e -y "-o$verifyFolder" $isoFile 'MJON\MJON-Windows-Tools.exe' | Out-Null
+ if ($LASTEXITCODE -ne 0) { throw '7-Zip no pudo extraer MJON de la ISO final.' }
+ $confirmed = Join-Path $verifyFolder 'MJON-Windows-Tools.exe'
+ RequireFile $confirmed
+ $hash = (Get-FileHash -LiteralPath $confirmed -Algorithm SHA256).Hash.ToLowerInvariant()
+ if ($hash -ne $expectedHash) { throw 'El hash MJON extraído de la nueva ISO no coincide.' }
+}
 function VerifyWindowsSource([string]$root) {
  foreach ($part in @('setup.exe','sources\boot.wim','boot\etfsboot.com','efi\microsoft\boot\efisys.bin','efi\boot\bootx64.efi')) {
   RequireFile (Join-Path $root $part)
@@ -51,6 +81,15 @@ if ($ExpectedWindowsSha256 -notmatch '^[0-9a-fA-F]{64}$') { throw 'SHA256 de Win
 RequireFile $WindowsIso
 if ([IO.Path]::GetExtension($WindowsIso).ToLowerInvariant() -ne '.iso') { throw 'Se requiere un archivo ISO.' }
 if (-not (Test-Path -LiteralPath $PayloadDirectory -PathType Container)) { throw 'Carpeta MJON inexistente.' }
+$extracted = $null
+if ($ExtractedSourceDirectory) {
+ if (-not (Test-Path -LiteralPath $ExtractedSourceDirectory -PathType Container)) {
+  throw 'No existe la carpeta extraída de Windows.'
+ }
+ $extracted = (Resolve-Path -LiteralPath $ExtractedSourceDirectory).Path
+ # Prevent using an empty or incorrect folder as an installation source.
+ VerifyWindowsSource $extracted
+}
 $src = (Resolve-Path -LiteralPath $WindowsIso).Path
 $package = (Resolve-Path -LiteralPath $PayloadDirectory).Path
 $dest = [IO.Path]::GetFullPath($OutputIso)
@@ -75,11 +114,16 @@ $wasMounted = $false
 $finalMounted = $false
 $stageRoot = Join-Path $destDir ('mjon-staging-' + [guid]::NewGuid().ToString('N'))
 try {
- $current = Get-DiskImage -ImagePath $src -ErrorAction SilentlyContinue
- if ($current -and $current.Attached) { throw 'Desmontá primero la ISO original.' }
- Mount-DiskImage -ImagePath $src -ErrorAction Stop | Out-Null
- $wasMounted = $true
- $isoRoot = RootOfIso $src
+ if ($extracted) {
+  # An official ISO + its verified hash is still required; avoid X-Lite DVD mounting.
+  $isoRoot = $extracted
+ } else {
+  $current = Get-DiskImage -ImagePath $src -ErrorAction SilentlyContinue
+  if ($current -and $current.Attached) { throw 'Desmontá primero la ISO original.' }
+  Mount-DiskImage -ImagePath $src -ErrorAction Stop | Out-Null
+  $wasMounted = $true
+  $isoRoot = RootOfIso $src
+ }
  VerifyWindowsSource $isoRoot
  if ($PreflightOnly) { Write-Host '[MJON] Verificación válida; sin escrituras.'; return }
  $staging = Join-Path $stageRoot 'windows-media'
@@ -118,14 +162,19 @@ No redistribuir imagenes Windows sin los derechos correspondientes.
  & $oscdimg -m -o -u2 -udfver102 -lMJON_WIN11_X64 $boot "-yo$bootOrder" $staging $dest
  if ($LASTEXITCODE -ne 0) { throw "oscdimg falló con $LASTEXITCODE" }
  RequireFile $dest
- Mount-DiskImage -ImagePath $dest -ErrorAction Stop | Out-Null
- $finalMounted = $true
- $finalRoot = RootOfIso $dest
- RequireFile (Join-Path $finalRoot 'setup.exe')
- RequireFile (Join-Path $finalRoot 'sources\boot.wim')
- $inside = Join-Path $finalRoot 'MJON\MJON-Windows-Tools.exe'
- RequireFile $inside
- if ((Get-FileHash -LiteralPath $inside -Algorithm SHA256).Hash.ToLowerInvariant() -ne $exeHash) { throw 'Hash de ejecutable dentro de ISO incorrecto.' }
+ if ($extracted) {
+  # X-Lite installations may not expose mounted ISO drives; inspect with 7-Zip.
+  VerifyOutputWith7Zip $dest $exeHash $stageRoot
+ } else {
+  Mount-DiskImage -ImagePath $dest -ErrorAction Stop | Out-Null
+  $finalMounted = $true
+  $finalRoot = RootOfIso $dest
+  RequireFile (Join-Path $finalRoot 'setup.exe')
+  RequireFile (Join-Path $finalRoot 'sources\boot.wim')
+  $inside = Join-Path $finalRoot 'MJON\MJON-Windows-Tools.exe'
+  RequireFile $inside
+  if ((Get-FileHash -LiteralPath $inside -Algorithm SHA256).Hash.ToLowerInvariant() -ne $exeHash) { throw 'Hash de ejecutable dentro de ISO incorrecto.' }
+ }
  Write-Host "[MJON] ISO de integración creada: $dest"
  Write-Host "[MJON] SHA256: $((Get-FileHash -LiteralPath $dest -Algorithm SHA256).Hash)"
  Write-Host '[MJON] Arranque UEFI/instalación real y escritorio MJON siguen pendientes.'

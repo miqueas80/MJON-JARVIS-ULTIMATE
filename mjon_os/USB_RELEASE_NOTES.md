@@ -90,3 +90,19 @@ systemctl --user status mjon-jarvis.service --no-pager
 - Para volver a Windows, apagá el sistema, sacá el USB y encendé la computadora normalmente.
 
 MJON AI OS es un proyecto independiente basado en Debian GNU/Linux y código abierto Dodaios; no está afiliado al equipo de Dodaios. Se conservan las licencias y atribuciones del proyecto original.
+
+## Provider readiness and optional Ollama warmup
+
+The source branch now validates a provider through a complete streamed
+response, not just the first event. An Ollama server that answers on HTTP is
+not shown as a verified text-generation engine until a real model response
+succeeds. Historical green health records from previous builds require a fresh
+generation test. MJON's loopback adapter rejects cloud-named Ollama models and
+external HTTP redirects.
+
+An optional model warmup command and user service are included in the source
+image definition. The service is disabled by default; it does not install the
+Ollama binary, download weights, or start a remote provider. Read
+mjon_os/PROVIDER_DIAGNOSTICS.md in the repository for setup and verification.
+The new fixes apply only to ISO images built from a commit containing them;
+existing downloadable ISO files are unchanged.

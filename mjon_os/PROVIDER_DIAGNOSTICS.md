@@ -70,3 +70,32 @@ in this repository yet.
 
 The branch changes are not an ISO release. Boot testing on real hardware,
 the new user service, and end-to-end model generation are still required.
+
+## Provider stream health: reason for a misleading green status
+
+The inherited brain health checker previously stopped on its first streamed
+event. That event might be metadata, whitespace, a partial answer, or be
+followed by a provider failure. It now drains the complete bounded probe,
+requires nonblank text, and reports late errors. The passive local-model
+monitor no longer writes a successful generation verdict when it checked only
+Ollama's server status. Pre-upgrade green records lacking generation evidence
+are invalidated until a fresh check succeeds.
+
+The installation must still be tested with a real model on the actual laptop;
+passing unit tests does not prove an installed provider works.
+
+## Important: 127.0.0.1 alone is not an air gap
+
+Ollama supports cloud model tags even through a locally running daemon.
+MJON's offline adapter refuses documented ':cloud' and '-cloud' model names
+and never follows HTTP redirects. For a strict local-only Ollama installation,
+the server administrator should also disable its cloud capabilities at the
+daemon level, e.g. OLLAMA_NO_CLOUD=1 when starting the Ollama service, or use
+the disable_ollama_cloud option in the daemon server.json file, and confirm
+that its logs state cloud is disabled. Setting this variable only on the MJON
+client would not disable cloud on an already-running Ollama server.
+
+Ollama reference: https://docs.ollama.com/faq
+
+An offline hardware test remains required, and users must not rely on the
+loopback address alone as proof that all optional engines stay offline.

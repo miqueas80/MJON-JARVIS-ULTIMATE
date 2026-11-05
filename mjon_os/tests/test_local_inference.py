@@ -1,8 +1,9 @@
 """Tests for the first real offline inference adapter of the MJON OS fabric."""
 from __future__ import annotations
 import json
+import io
 import unittest
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 
 from mjon_os.local_inference import OllamaClient, InferenceUnavailable
 
@@ -80,6 +81,19 @@ class OllamaClientTests(unittest.TestCase):
         client = OllamaClient(opener=lambda req, **kwargs: FakeHTTPResponse({"models": []}))
         with self.assertRaises(ValueError):
             client.ask("X"*9000)
+
+    def test_200_provider_error_is_not_falsely_reported_as_success(self):
+        client = OllamaClient(opener=lambda req, **kw: FakeHTTPResponse(
+            {"error": "model runner exited unexpectedly"}))
+        with self.assertRaisesRegex(InferenceUnavailable, "runner exited"):
+            client.models()
+
+    def test_http_provider_error_preserves_status_and_safe_reason(self):
+        def fail(req, **kwargs):
+            raise HTTPError(req.full_url, 503, "Service Unavailable", {},
+                            io.BytesIO(b'{"error": "model requires more memory"}'))
+        with self.assertRaisesRegex(InferenceUnavailable, "HTTP 503: model requires more memory"):
+            OllamaClient(opener=fail).models()
 
     def test_transport_failure_is_reported_not_fabricated(self):
         def fail(req, **kwargs):

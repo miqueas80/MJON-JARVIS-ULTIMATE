@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -15,6 +16,7 @@ from threading import Thread
 
 from .ai_fabric import HardwareProfile, inspect_modules
 from .doctor import parse_memtotal
+from .first_boot import activate_local_brain
 from .local_inference import InferenceUnavailable, OllamaClient
 from .provider_health import diagnose as diagnose_ollama, preload as preload_ollama
 
@@ -246,6 +248,8 @@ def run_gui() -> int:
     provider_controls.pack_start(diagnose_button, True, True, 0)
     provider_controls.pack_start(preload_button, True, True, 0)
     local_page.pack_start(provider_controls, False, False, 0)
+    activate_button = Gtk.Button(label="Usar Ollama en JARVIS (reinicia el asistente)")
+    local_page.pack_start(activate_button, False, False, 0)
     note = Gtk.Label(
         label="Detectar un proveedor o cargar pesos no confirma la IA: "
               "solo una respuesta real habilita el estado operativo.",
@@ -266,12 +270,14 @@ def run_gui() -> int:
         ask_button.set_sensitive(True)
         diagnose_button.set_sensitive(True)
         preload_button.set_sensitive(True)
+        activate_button.set_sensitive(True)
         return False
 
     def start_provider_action(operation):
         ask_button.set_sensitive(False)
         diagnose_button.set_sensitive(False)
         preload_button.set_sensitive(False)
+        activate_button.set_sensitive(False)
         answer.get_buffer().set_text("Comprobando Ollama local...")
 
         def worker():
@@ -279,13 +285,40 @@ def run_gui() -> int:
                 if operation == "preload":
                     status = preload_ollama(OllamaClient())
                     text = "Precarga: " + status.detail + " Modelo: " + (status.model or "-")
+                elif operation == "activate":
+                    # Never switch a user's preferred provider without a click,
+                    # and never switch to an Ollama engine that cannot answer.
+                    status = diagnose_ollama(OllamaClient(), verify_generation=True)
+                    if not status.ready:
+                        text = "No se cambió JARVIS: " + status.detail
+                    else:
+                        root = os.environ.get("MJON_AI_OS_CONFIG_ROOT", "").strip()
+                        if root:
+                            config = Path(root) / "dodaios.toml"
+                        else:
+                            xdg = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")))
+                            config = xdg / "mjon-ai-os" / "dodaios.toml"
+                        changed = activate_local_brain(config)
+                        if changed:
+                            restarted = subprocess.run(
+                                ["systemctl", "--user", "restart", "mjon-jarvis.service"],
+                                capture_output=True, text=True, timeout=20,
+                                check=False, shell=False,
+                            )
+                            if restarted.returncode == 0:
+                                text = "JARVIS reiniciado con Ollama local verificado: " + (status.model or "-")
+                            else:
+                                text = ("Configuración guardada con copia privada, pero JARVIS no reinició. "
+                                        "Revisá systemctl --user status mjon-jarvis.service")
+                        else:
+                            text = "JARVIS ya está configurado para Ollama local."
                 else:
                     status = diagnose_ollama(OllamaClient(), verify_generation=True)
                     text = ("IA operativa: " if status.ready else "Proveedor no operativo: ")
                     text += status.detail
                     if status.model:
                         text += " Modelo: " + status.model
-            except (InferenceUnavailable, ValueError) as exc:
+            except (InferenceUnavailable, ValueError, OSError, subprocess.TimeoutExpired) as exc:
                 text = "Proveedor no operativo: " + str(exc)
             GLib.idle_add(set_answer, text)
 
@@ -293,6 +326,7 @@ def run_gui() -> int:
 
     diagnose_button.connect("clicked", lambda _button: start_provider_action("verify"))
     preload_button.connect("clicked", lambda _button: start_provider_action("preload"))
+    activate_button.connect("clicked", lambda _button: start_provider_action("activate"))
 
     def on_ask(_button):
         prompt = entry.get_text().strip()

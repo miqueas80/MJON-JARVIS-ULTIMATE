@@ -71,5 +71,18 @@ class MediaTreeTests(unittest.TestCase):
                 inspect_payload(path)
 
 
+class LargeIsoBootOrderingTests(unittest.TestCase):
+    def test_builder_orders_windows_boot_files_for_media_over_4_5_gb(self):
+        script = (
+            Path(__file__).resolve().parents[2]
+            / "packaging" / "windows" / "build-mjon-win11-media.ps1"
+        ).read_text(encoding="utf-8")
+        self.assertIn("bootOrder", script)
+        self.assertIn("-yo$bootOrder", script)
+        self.assertIn("sources\\boot.wim", script)
+        self.assertIn("efi\\microsoft\\boot\\bcd", script)
+        self.assertIn("Set-Content", script)
+
+
 if __name__ == "__main__":
     unittest.main()

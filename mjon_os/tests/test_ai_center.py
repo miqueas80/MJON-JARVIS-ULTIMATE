@@ -48,6 +48,10 @@ class NativeAICenterTests(unittest.TestCase):
         self.assertIn("Gtk.Button", source)
         self.assertIn("systemsettings", source)
         self.assertIn("Thread(", source)
+        self.assertIn("activate_local_brain", source)
+        self.assertIn('verify_generation=True', source)
+        self.assertIn('["systemctl", "--user", "restart", "mjon-jarvis.service"]', source)
+        self.assertIn("Usar Ollama en JARVIS", source)
         self.assertNotIn("shell=True", source)
 
 

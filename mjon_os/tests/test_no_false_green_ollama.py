@@ -1,7 +1,10 @@
 """The passive upstream Ollama monitor must not claim green on HTTP alone."""
 from __future__ import annotations
 
+import json
+import tempfile
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -27,6 +30,26 @@ class NoFalseGreenOllamaTests(unittest.IsolatedAsyncioTestCase):
             )
         self.assertEqual(record["status"], "unknown")
         self.assertIn("not checked", record["reason"])
+
+    async def test_legacy_green_record_needs_fresh_generation_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "local_models_health.json"
+            path.write_text(json.dumps({
+                "status": "ok", "reason": "", "last_ok": "2026-11-04T10:00:00"
+            }))
+            with patch.object(monitor, "health_path", return_value=path):
+                record = monitor.read_health_record()
+            self.assertEqual(record["status"], "unknown")
+            self.assertIsNone(record["last_ok"])
+
+    async def test_new_generation_verdict_can_still_be_green(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "local_models_health.json"
+            with patch.object(monitor, "health_path", return_value=path):
+                monitor.write_health_record("ok", "", checked_at="2026-11-05T00:00:00")
+                record = monitor.read_health_record()
+            self.assertEqual(record["status"], "ok")
+            self.assertEqual(record["last_ok"], "2026-11-05T00:00:00")
 
     async def test_server_only_probe_with_no_chat_model_is_not_green(self):
         async def server(_root):

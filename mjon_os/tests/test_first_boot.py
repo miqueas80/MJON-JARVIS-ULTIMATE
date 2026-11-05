@@ -7,7 +7,7 @@ import tomllib
 import unittest
 from pathlib import Path
 
-from mjon_os.first_boot import personalize_template, provision_user_config
+from mjon_os.first_boot import activate_local_brain, personalize_template, provision_user_config
 
 
 _SAMPLE = '''[trigger.wake_word]
@@ -91,6 +91,44 @@ class FirstBootTests(unittest.TestCase):
     def test_relative_data_directory_is_rejected(self):
         with self.assertRaises(ValueError):
             personalize_template(_SAMPLE, Path('data'))
+
+
+    def test_existing_untouched_cloud_profile_can_opt_in_to_ollama(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory) / 'dodaios.toml'
+            config.write_text(_SAMPLE, encoding='utf-8')
+            self.assertTrue(activate_local_brain(config))
+            modified = tomllib.loads(config.read_text(encoding='utf-8'))
+            self.assertEqual(modified['brain']['primary'], 'ollama')
+            self.assertEqual(modified['brain']['fallback'], 'ollama')
+            self.assertEqual(modified['brain']['deep_brain'], 'ollama')
+            self.assertEqual(modified['brain']['routing_provider'], 'ollama')
+            self.assertEqual(modified['brain']['routing_model'], '')
+            self.assertTrue(modified['other']['enabled'])
+            backup = config.with_suffix('.toml.bak')
+            self.assertEqual(backup.read_text(encoding='utf-8'), _SAMPLE)
+            if os.name == 'posix':
+                self.assertEqual(backup.stat().st_mode & 0o777, 0o600)
+            self.assertFalse(activate_local_brain(config))
+
+    def test_custom_cloud_provider_is_never_overwritten(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory) / 'dodaios.toml'
+            custom = _SAMPLE.replace('primary = "gemini"', 'primary = "openai"')
+            config.write_text(custom, encoding='utf-8')
+            with self.assertRaisesRegex(ValueError, 'personalizado'):
+                activate_local_brain(config)
+            self.assertEqual(config.read_text(encoding='utf-8'), custom)
+            self.assertFalse(config.with_suffix('.toml.bak').exists())
+
+    def test_symlinked_config_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            real = Path(directory) / 'real.toml'
+            real.write_text(_SAMPLE, encoding='utf-8')
+            link = Path(directory) / 'dodaios.toml'
+            link.symlink_to(real)
+            with self.assertRaises(ValueError):
+                activate_local_brain(link)
 
 
 if __name__ == '__main__':

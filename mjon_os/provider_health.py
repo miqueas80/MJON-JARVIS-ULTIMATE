@@ -13,7 +13,7 @@ import sys
 import time
 from typing import Any, Callable
 
-from .local_inference import InferenceUnavailable, OllamaClient
+from .local_inference import InferenceUnavailable, OllamaClient, is_cloud_model
 
 
 @dataclass(frozen=True)
@@ -31,7 +31,10 @@ class ProviderStatus:
 
 
 def _choose_model(client: OllamaClient, requested: str | None) -> str:
-    available = client._model_inventory()
+    if requested is not None and is_cloud_model(requested):
+        raise InferenceUnavailable("Ollama cloud models cannot be preloaded in offline mode.")
+    available = tuple((name, size) for name, size in client._model_inventory()
+                      if not is_cloud_model(name))
     if not available:
         raise InferenceUnavailable("Ollama responde, pero no tiene modelos descargados.")
     models = dict(available)
@@ -86,11 +89,13 @@ def preload(client: OllamaClient, *, model: str | None = None,
     if keep_alive not in {"1m", "5m", "10m"}:
         raise ValueError("La precarga solo permite 1m, 5m o 10m.")
     chosen = _choose_model(client, model)
-    client._request("/api/generate", body={
+    result = client._request("/api/generate", body={
         "model": chosen, "prompt": "", "stream": False,
         "keep_alive": keep_alive,
         "options": {"num_ctx": 1024},
     }, timeout=90)
+    if result.get("done") is not True:
+        raise InferenceUnavailable("Ollama returned an incomplete preload response.")
     if chosen not in _loaded_models(client):
         raise InferenceUnavailable("Ollama aceptó la precarga pero no confirmó el modelo en RAM.")
     return ProviderStatus("loaded_unverified", chosen,

@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import tempfile
 import tomllib
 
 _REQUIRED = ('trigger.wake_word', 'stt', 'memory', 'autostart')
@@ -86,6 +87,118 @@ def provision_user_config(template: Path, config_file: Path, data_directory: Pat
     except BaseException:
         config_file.unlink(missing_ok=True)
         raise
+    return True
+
+
+
+# Only an untouched cloud-first config is eligible for opt-in migration.
+# Personalized cloud provider choices must never be silently overwritten.
+_CLOUD_BRAIN_DEFAULTS = {
+    'primary': 'gemini',
+    'fallback': 'gemini',
+    'deep_brain': 'gemini',
+    'routing_provider': 'gemini',
+    'routing_model': 'gemini-3.5-flash',
+}
+_LOCAL_BRAIN_DEFAULTS = {
+    'primary': 'ollama',
+    'fallback': 'ollama',
+    'deep_brain': 'ollama',
+    'routing_provider': 'ollama',
+    'routing_model': '',
+}
+
+
+def activate_local_brain(config_file: Path) -> bool:
+    """Opt-in migration of an existing, uncustomized cloud-first native profile.
+
+    Preserve all unrelated settings, retain a private backup and atomically
+    replace the per-user TOML. Does not install models or restart any service.
+    """
+    if not config_file.is_absolute() or config_file.is_symlink() or not config_file.is_file():
+        raise ValueError('Se requiere un archivo de configuración regular y absoluto.')
+    raw = config_file.read_text(encoding='utf-8')
+    settings = tomllib.loads(raw)
+    brain = settings.get('brain')
+    if not isinstance(brain, dict):
+        raise ValueError('Falta la sección [brain] de la configuración.')
+    if all(brain.get(key) == value for key, value in _LOCAL_BRAIN_DEFAULTS.items()):
+        return False
+    if any(brain.get(key) != value for key, value in _CLOUD_BRAIN_DEFAULTS.items()):
+        raise ValueError('El proveedor ya fue personalizado; no se cambiará automáticamente.')
+
+    table = ''
+    seen: set[str] = set()
+    output: list[str] = []
+    for line in raw.splitlines(keepends=True):
+        section = re.match(r'^\s*\[([^\]]+)\]\s*(?:#.*)?
+    parser = argparse.ArgumentParser(description='Provision MJON AI OS user profile')
+    parser.add_argument('--template', type=Path)
+    parser.add_argument('--config', type=Path, required=True)
+    parser.add_argument('--data', type=Path)
+    parser.add_argument('--activate-ollama', action='store_true',
+                        help='Opt-in local provider for an unchanged native cloud profile')
+    args = parser.parse_args(argv)
+    if args.activate_ollama:
+        try:
+            changed = activate_local_brain(args.config)
+        except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
+            parser.exit(2, str(exc) + '\n')
+        print('Proveedor Ollama configurado.' if changed
+              else 'JARVIS ya usa Ollama; sin cambios.')
+        return 0
+    if args.template is None or args.data is None:
+        parser.error('--template y --data son obligatorios para la configuración inicial')
+    provision_user_config(args.template, args.config, args.data)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
+, line.strip())
+        if section:
+            table = section.group(1).strip()
+        assignment = re.match(r'^(\s*)([a-zA-Z_][a-zA-Z_0-9-]*)\s*=(.*)
+    parser = argparse.ArgumentParser(description='Provision MJON AI OS user profile')
+    parser.add_argument('--template', type=Path, required=True)
+    parser.add_argument('--config', type=Path, required=True)
+    parser.add_argument('--data', type=Path, required=True)
+    args = parser.parse_args(argv)
+    provision_user_config(args.template, args.config, args.data)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
+, line)
+        if table == 'brain' and assignment and assignment.group(2) in _LOCAL_BRAIN_DEFAULTS:
+            key = assignment.group(2)
+            output.append(f'{assignment.group(1)}{key} = {json.dumps(_LOCAL_BRAIN_DEFAULTS[key])}\n')
+            seen.add(key)
+        else:
+            output.append(line)
+    if seen != set(_LOCAL_BRAIN_DEFAULTS):
+        raise ValueError('No se encontraron todas las opciones de [brain].')
+    updated = ''.join(output)
+    tomllib.loads(updated)
+
+    backup = config_file.with_suffix(config_file.suffix + '.bak')
+    # O_EXCL prevents overwriting an existing backup (including a symlink).
+    with os.fdopen(os.open(backup, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600),
+                   'w', encoding='utf-8') as handle:
+        handle.write(raw)
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile('w', encoding='utf-8',
+                                         dir=config_file.parent, prefix='.mjon-brain-',
+                                         delete=False) as handle:
+            temporary = Path(handle.name)
+            os.chmod(temporary, 0o600)
+            handle.write(updated)
+        os.replace(temporary, config_file)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
     return True
 
 

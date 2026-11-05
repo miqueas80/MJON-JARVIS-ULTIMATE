@@ -204,24 +204,55 @@ def self_test() -> int:
         thread.join(timeout=5)
 
 
+def browser_fallback(url: str, *, opener=None, notifier=None) -> None:
+    """Graceful recovery when the WebView2 runtime is absent on Windows X-Lite.
+
+    The fallback is restricted to the exact local MJON root, never arbitrary
+    websites. A blocking Windows dialog keeps the server alive until the user
+    finishes with the browser tab; closing the dialog stops the local server.
+    """
+    from urllib.parse import urlsplit
+    import webbrowser
+    parsed = urlsplit(url)
+    if (parsed.scheme != "http" or parsed.hostname != "127.0.0.1"
+            or parsed.username or parsed.password or parsed.path != "/"
+            or parsed.query or parsed.fragment or parsed.port is None):
+        raise ValueError("Se bloqueó una URL no autorizada para MJON local.")
+    launch = opener or webbrowser.open
+    if not launch(url):
+        raise RuntimeError("No se pudo abrir el navegador de recuperación local.")
+    if notifier is None:
+        import ctypes
+        def notifier() -> None:
+            ctypes.windll.user32.MessageBoxW(
+                0,
+                "WebView2 no está disponible. MJON se abrió en tu navegador. "
+                "Dejá esta ventana abierta mientras uses MJON y cerrala para salir.",
+                "MJON AI OS - recuperación local", 0,
+            )
+    notifier()
+
+
 def main() -> int:
-    """Run native WebView2 window; no network endpoints other than localhost."""
+    """Run native WebView2 window with a local-browser fallback."""
     if platform.system() != "Windows":
         raise RuntimeError("La interfaz nativa MJON requiere Windows.")
-    try:
-        import webview
-    except ImportError as exc:
-        raise RuntimeError("Falta pywebview/WebView2 para abrir el escritorio MJON.") from exc
     server = create_server(port=0)
     import threading
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
         url = f"http://127.0.0.1:{server.server_port}/"
-        webview.create_window("MJON AI OS — JARVIS", url, width=1400,
-                              height=850, min_size=(900, 580),
-                              background_color="#060c1d")
-        webview.start(debug=False)
+        try:
+            import webview
+            webview.create_window("MJON AI OS — JARVIS", url, width=1400,
+                                  height=850, min_size=(900, 580),
+                                  background_color="#060c1d")
+            webview.start(debug=False)
+        except Exception:
+            # Windows X-Lite may not include the Edge WebView2 Runtime.
+            # Never download/install it silently; use a local browser instead.
+            browser_fallback(url)
     finally:
         server.shutdown()
         server.server_close()

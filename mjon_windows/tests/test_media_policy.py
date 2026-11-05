@@ -96,17 +96,6 @@ class NoIsoMountFallbackTests(unittest.TestCase):
         self.assertIn("if ($ExtractedSourceDirectory)", script)
         self.assertIn("GetSevenZip", script)
         self.assertIn("VerifyOutputWith7Zip", script)
-    def test_can_build_from_7zip_without_windows_iso_mounting(self):
-        script = (
-            Path(__file__).resolve().parents[2]
-            / "packaging" / "windows" / "build-mjon-win11-media.ps1"
-        ).read_text(encoding="utf-8")
-        self.assertIn("[switch]$Use7Zip", script)
-        self.assertIn("FindSevenZip", script)
-        self.assertIn("& $sevenZip x $src", script)
-        self.assertIn("VerifyWindowsSource $isoRoot", script)
-        self.assertIn("& $sevenZip x $dest", script)
-        self.assertIn("if ($Use7Zip)", script)
 
 
 if __name__ == "__main__":

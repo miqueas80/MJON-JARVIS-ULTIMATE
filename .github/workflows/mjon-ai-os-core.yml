@@ -1,0 +1,31 @@
+name: MJON AI OS - native core regression checks
+
+on:
+  push:
+    branches: [feature/mjon-ai-os-native]
+    paths:
+      - 'mjon_os/**'
+      - '.github/workflows/mjon-ai-os-core.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout reviewed native source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          lfs: false
+          persist-credentials: false
+      - name: Python 3.13
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Validate module syntax
+        run: python -m compileall -q mjon_os
+      - name: Run native OS test suite
+        run: python -m unittest discover -s mjon_os/tests -p 'test_*.py' -v

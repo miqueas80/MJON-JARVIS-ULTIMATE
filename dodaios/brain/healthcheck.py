@@ -85,7 +85,7 @@ class BrainHealthChecker:
 
         try:
             await asyncio.wait_for(
-                self._drain_first_delta(brain),
+                self._drain_probe_response(brain),
                 timeout=timeout_s,
             )
         except TimeoutError:
@@ -130,8 +130,19 @@ class BrainHealthChecker:
         return results
 
     @staticmethod
-    async def _drain_first_delta(brain: object) -> None:
-        """Fetches the first BrainDelta from the stream and discards the rest."""
+    async def _drain_probe_response(brain: object) -> None:
+        """Require meaningful text and a clean stream completion.
+
+        A provider can emit usage metadata or a partial token before returning
+        an HTTP error. Treating the first delta as success made the UI green
+        while a real chat would fail on the next streamed event.
+        """
         stream = brain.complete(_PROBE_REQUEST)  # type: ignore[attr-defined]
-        async for _delta in stream:
-            break
+        produced_text = False
+        async for delta in stream:
+            if isinstance(getattr(delta, "content", None), str) and delta.content.strip():
+                produced_text = True
+            if getattr(delta, "finish_reason", None) in {"error", "failed"}:
+                raise BrainConfigError("The provider ended the probe with an error.")
+        if not produced_text:
+            raise BrainConfigError("The provider probe produced no text.")

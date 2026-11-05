@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 from .doctor import parse_memtotal
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import Request, build_opener, ProxyHandler
 from typing import Callable, Any
 
 
@@ -28,7 +28,7 @@ class OllamaClient:
         if endpoint != self.DEFAULT_ENDPOINT:
             raise ValueError("MJON offline adapter only permits literal IPv4 loopback Ollama")
         self.endpoint = endpoint
-        self._opener = opener or urlopen
+        self._opener = opener or build_opener(ProxyHandler({})).open
         if ram_bytes is None:
             try:
                 ram_bytes = parse_memtotal(Path("/proc/meminfo").read_text(encoding="ascii"))
@@ -49,7 +49,19 @@ class OllamaClient:
         try:
             with self._opener(request, timeout=timeout) as response:
                 raw = response.read(2 * 1024 * 1024 + 1)
-        except (HTTPError, URLError, OSError, TimeoutError) as exc:
+        except HTTPError as exc:
+            # HTTP errors carry actionable provider errors (e.g. unavailable
+            # model, unsupported architecture, insufficient memory).
+            try:
+                payload = json.loads(exc.read(2048))
+                reason = payload.get("error", "") if isinstance(payload, dict) else ""
+                reason = str(reason).strip()[:160]
+            except (ValueError, UnicodeError, OSError):
+                reason = ""
+            raise InferenceUnavailable(
+                f"Ollama HTTP {exc.code}" + (f": {reason}" if reason else "")
+            ) from exc
+        except (URLError, OSError, TimeoutError) as exc:
             raise InferenceUnavailable("Ollama local no responde; revisá el servicio.") from exc
         if len(raw) > 2 * 1024 * 1024:
             raise InferenceUnavailable("Respuesta local demasiado grande.")
@@ -59,6 +71,9 @@ class OllamaClient:
             raise InferenceUnavailable("Ollama devolvió datos que no son JSON válido.") from exc
         if not isinstance(result, dict):
             raise InferenceUnavailable("Ollama devolvió un formato inesperado.")
+        error = result.get("error")
+        if error:
+            raise InferenceUnavailable("Ollama rechazó la solicitud: " + str(error)[:160])
         return result
 
     def _model_inventory(self) -> tuple[tuple[str, int | None], ...]:

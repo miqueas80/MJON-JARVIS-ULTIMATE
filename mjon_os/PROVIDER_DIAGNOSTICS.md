@@ -59,6 +59,45 @@ or enable cloud providers. It requires the local Ollama service to be ready
 before it attempts warmup. Live USB without persistence loses user changes
 and downloaded models on reboot.
 
+
+## Por qué JARVIS fallaba aunque el Centro de mando detectara Ollama
+
+La plantilla original de Dodaios apuntaba a Gemini como `brain.primary`,
+`brain.fallback`, `brain.deep_brain` y `brain.routing_provider`. El
+Centro de mando tenía un cliente Ollama independiente: un test local exitoso
+NO configuraba automáticamente el cerebro de JARVIS.
+
+Los perfiles nuevos de MJON AI OS seleccionan ahora `ollama` como proveedor
+de cerebro y dejan vacío `routing_model` para descubrir un modelo local
+existente. Si no hay Ollama, el servidor no está iniciado o no hay pesos,
+el sistema debe informar que aún no puede generar texto. La ISO sigue sin
+incluir el ejecutable ni los pesos de Ollama.
+
+### Recuperar un perfil de una ISO anterior
+
+1. Instalá Ollama desde su fuente oficial mediante una acción consciente del
+   usuario y con Internet, y obtené un modelo local compatible con tu RAM.
+   Por ejemplo, con 8 GiB y espacio persistente: `ollama pull qwen3:1.7b`
+   (aproximadamente 1,4 GB de descarga). No uses la etiqueta `:latest`
+   sin revisar su tamaño.
+2. Confirmá que el servidor y el modelo responden:
+   `/opt/mjon-ai-os/venv/bin/python -m mjon_os.provider_health --verify`
+3. En una nueva ISO con este cambio, abrí Centro de mando > IA local y pulsá
+   **Usar Ollama en JARVIS (reinicia el asistente)**. Este botón solo cambia
+   los valores iniciales de Gemini **después de una generación local real**.
+   Guarda una copia privada `dodaios.toml.bak` y reinicia el servicio de
+   usuario sin privilegios de administrador.
+4. Si la GUI no funciona, hacé la migración opcional desde Konsole:
+   `/opt/mjon-ai-os/venv/bin/python -m mjon_os.first_boot --activate-ollama --config "$HOME/.config/mjon-ai-os/dodaios.toml"`
+   y luego `systemctl --user restart mjon-jarvis.service`. Solo modifica
+   configuraciones con los cinco valores Gemini predeterminados. Si ya
+   elegiste otro proveedor, se niega a reemplazar tus preferencias.
+
+Una ISO antigua no adquiere estas correcciones por estar disponible el
+código fuente en GitHub: hace falta iniciar una imagen construida con el
+commit corregido. En USB Live sin persistencia, los modelos descargados y
+la configuración de usuario pueden perderse tras el reinicio.
+
 ## Investigating the Doraimon green-then-error report
 
 A green executable indicator was insufficient. To diagnose a specific

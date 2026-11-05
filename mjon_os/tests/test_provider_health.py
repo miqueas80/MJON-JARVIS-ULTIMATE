@@ -160,6 +160,12 @@ class ProviderHealthTests(unittest.TestCase):
             self.assertEqual(result.state, "disabled")
             self.assertEqual(slept, [])
 
+    def test_cloud_model_cannot_be_preloaded_from_the_local_endpoint(self):
+        client = FakeClient(models=[("gemma4:cloud", 12000)])
+        with self.assertRaisesRegex(InferenceUnavailable, "cloud"):
+            preload(client, model="gemma4:cloud")
+        self.assertNotIn("/api/generate", [route for route, _ in client.requests])
+
     def test_invalid_keep_alive_rejected(self):
         with self.assertRaises(ValueError):
             preload(FakeClient(), keep_alive="-1")

@@ -196,6 +196,9 @@ def test_test_route_runs_the_setup_test_and_health_reads_the_file(
     assert after["since"] == after["last_ok"] == report["checked_at"]
     written = json.loads((tmp_path / "state" / "local_models_health.json").read_text("utf-8"))
     assert written["overall"] == "ok"
+    server.app.state.config.brain.providers["ollama"].base_url = "http://changed:11434"
+    with TestClient(server.app) as client:
+        assert client.get(f"{BASE}/health").json()["status"] == "unknown"
 
 
 def test_benchmarks_without_a_cache_is_curated_only(server: WebServer) -> None:

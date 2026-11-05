@@ -108,6 +108,8 @@ def initialize_model_store(payload: Path, store: Path) -> bool:
     if store.is_symlink():
         raise ValueError("Refusing a symlink as the per-user model store")
     if store.exists():
+        if (store / "blobs").is_symlink():
+            raise ValueError("Legacy blob-directory link is unsafe for generated profiles; preserve it and initialize a new store")
         if (store / ".mjon-payload-sha256").read_text().strip() != sha256(payload / "manifest.json"):
             raise ValueError("Existing model store belongs to another payload; preserve and migrate explicitly")
         return False
@@ -116,7 +118,14 @@ def initialize_model_store(payload: Path, store: Path) -> bool:
     store.mkdir(mode=0o700)
     try:
         shutil.copytree(payload / "models/manifests", store / "manifests")
-        (store / "blobs").symlink_to((payload / "models/blobs").resolve(), target_is_directory=True)
+        # Ollama creates small parameter/config blobs for derived profiles.
+        # Link each immutable blob individually, keeping the directory itself
+        # writable so those new blobs never alter the image payload.
+        (store / "blobs").mkdir()
+        for blob in (payload / "models/blobs").iterdir():
+            if not blob.is_file():
+                raise ValueError("Model blobs must be regular files")
+            (store / "blobs" / blob.name).symlink_to(blob.resolve())
         (store / ".mjon-payload-sha256").write_text(sha256(payload / "manifest.json") + "\n")
     except BaseException:
         shutil.rmtree(store)

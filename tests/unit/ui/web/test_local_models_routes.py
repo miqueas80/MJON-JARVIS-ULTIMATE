@@ -679,7 +679,7 @@ def test_verify_runs_the_four_steps_and_refreshes_the_badge(
     ]
     assert body["steps"][0]["ms"] == 7
     assert body["steps"][1]["model"] == "qwen3.5:4b"
-    assert health_monitor.read_health_record()["status"] == "ok"
+    assert health_monitor.read_health_record(server.app.state.config)["status"] == "ok"
 
 
 def test_idle_release_round_trip(server: WebServer, fake, monkeypatch) -> None:

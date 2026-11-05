@@ -42,6 +42,12 @@ class AIFabricTests(unittest.TestCase):
         self.assertIsNone(plan.engine_id)
         self.assertIn("disponible", plan.reason)
 
+    def test_bare_python_runtime_is_not_a_local_chat_engine(self):
+        hw = HardwareProfile(ram_gib=8, discrete_gpu=False, network_available=False)
+        plan = plan_capability("inference", hw, executable_exists=lambda cmd: False,
+                               distribution_present=lambda name: True)
+        self.assertIsNone(plan.engine_id)
+
     def test_remote_not_selected_without_explicit_consent_and_credentials(self):
         hw = HardwareProfile(ram_gib=32, discrete_gpu=True, network_available=True)
         for allow, creds in ((False, True), (True, False)):

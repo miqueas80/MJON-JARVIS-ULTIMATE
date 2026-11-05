@@ -62,7 +62,10 @@ def worker(args) -> dict:
     from mjon_os.local_inference import OllamaClient, InferenceUnavailable
     from mjon_os.provider_health import diagnose, preload, preload_from_config
     from mjon_os.ollama_policy import physical_memory
+    from mjon_os.offline_payload import validate_payload
     import psutil
+    if args.payload:
+        validate_payload(args.payload)
 
     evidence = {"kind": "real-model-network-isolated-provider-test",
                 "desktop_or_physical_hardware_test": False,
@@ -72,9 +75,14 @@ def worker(args) -> dict:
     revision = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT,
                               capture_output=True, text=True, check=False)
     evidence["source_commit"] = revision.stdout.strip() if revision.returncode == 0 else None
+    status = subprocess.run(["git", "status", "--porcelain"], cwd=ROOT,
+                            capture_output=True, text=True, check=False)
+    evidence["source_worktree_dirty"] = bool(status.stdout.strip()) if status.returncode == 0 else None
     sources = ("mjon_os/first_boot.py", "mjon_os/local_inference.py", "mjon_os/provider_health.py",
                "mjon_os/jarvis_probe.py", "mjon_os/ollama_policy.py", "dodaios/plugins/brain/ollama.py",
-               "dodaios/brain/manager.py", "dodaios/brain/resolver.py")
+               "dodaios/brain/manager.py", "dodaios/brain/resolver.py", "mjon_os/offline_payload.py",
+               "mjon_os/ai_fabric.py", "dodaios/local_models/health_monitor.py",
+               "dodaios/local_models/assistant_test.py", "scripts/mjon_offline_acceptance.py")
     evidence["source_file_sha256"] = {path: digest(ROOT / path) for path in sources}
     checks = evidence["checks"]
     env = {key: value for key, value in os.environ.items() if "proxy" not in key.lower()}
@@ -197,6 +205,9 @@ def worker(args) -> dict:
                 server.wait(timeout=20)
         evidence["sampled_peak_daemon_runner_aggregate_rss_bytes"] = max(samples, default=0)
         evidence["memory_measurement_limit"] = "Sampled aggregate RSS of daemon+runner only; excludes KDE, GUI and probe subprocess. Shared pages may be counted twice. Not an 8 GiB hardware benchmark."
+    if args.payload:
+        validate_payload(args.payload)
+        checks["immutable_payload_unchanged"] = True
     evidence["infrastructure_passed"] = bool(checks) and all(checks.values())
     evidence["passed"] = evidence["infrastructure_passed"] and all(evidence.get("quality_checks", {}).values())
     return evidence
@@ -208,15 +219,19 @@ def main() -> int:
     parser.add_argument("--models", type=Path, required=True)
     parser.add_argument("--model", required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--payload", type=Path, help="Also verify immutable image payload before and after inference")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
     args.ollama, args.models, args.output = args.ollama.resolve(), args.models.resolve(), args.output.resolve()
     if not args.ollama.is_file() or not args.models.is_dir() or args.output.exists():
         parser.error("Supply existing runtime/weights and a new output path")
     if not args.worker:
-        return subprocess.run(["unshare", "-Urn", sys.executable, str(Path(__file__).resolve()),
+        command = ["unshare", "-Urn", sys.executable, str(Path(__file__).resolve()),
                                "--worker", "--ollama", str(args.ollama), "--models", str(args.models),
-                               "--model", args.model, "--output", str(args.output)], timeout=600).returncode
+                               "--model", args.model, "--output", str(args.output)]
+        if args.payload:
+            command.extend(["--payload", str(args.payload.resolve())])
+        return subprocess.run(command, timeout=600).returncode
     result = worker(args)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")

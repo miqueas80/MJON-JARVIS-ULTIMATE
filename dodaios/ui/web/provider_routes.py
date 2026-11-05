@@ -2278,16 +2278,16 @@ async def _compute_section_health(
     # The Local models sidebar badge: the persisted self-check record only —
     # a file read, never a live call from this polled route.
     sections["local_models"] = await _safe_check(
-        "local_models", asyncio.to_thread(_local_models_section_health)
+        "local_models", asyncio.to_thread(_local_models_section_health, cfg)
     )
     return sections
 
 
-def _local_models_section_health() -> SectionHealth:
+def _local_models_section_health(cfg: Any = None) -> SectionHealth:
     """The Local models badge from ``state/local_models_health.json`` (file only)."""
     from dodaios.local_models.health_monitor import read_health_record
 
-    record = read_health_record()
+    record = read_health_record(cfg)
     status = record["status"]
     if status not in _section_health.SECTION_HEALTH_STATUSES:
         status = _section_health.UNKNOWN

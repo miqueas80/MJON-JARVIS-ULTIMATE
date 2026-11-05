@@ -1,0 +1,112 @@
+{
+  "kind": "real-model-network-isolated-provider-test",
+  "desktop_or_physical_hardware_test": false,
+  "interfaces": [
+    "lo"
+  ],
+  "external_connect_failure": "[Errno 101] Network is unreachable",
+  "physical_ram_bytes": 10451423232,
+  "model": "qwen3:1.7b",
+  "binary_sha256": "4a525117528467da41be4188ef8efbc3dbbca9da420fb25cd61cf49d104732fd",
+  "checks": {
+    "download_visible": true,
+    "preload_is_unverified": true,
+    "adapter_nonempty_completed_response": true,
+    "adapter_verified": true,
+    "actual_jarvis_brain_completed": true,
+    "proxy_poisoning_ignored": true,
+    "missing_model_refused": true,
+    "stopped_server_not_green": true,
+    "startup_preload_after_restart": true,
+    "recovery_after_restart": true,
+    "immutable_payload_unchanged": true
+  },
+  "source_commit": "93c2640750c79c8154ede0bee8fb50f0f86e4aff",
+  "source_file_sha256": {
+    "mjon_os/first_boot.py": "98e0882b6e9aecc656a533335443aeae29fcf77b43b4ba5eeab54b7acf751db2",
+    "mjon_os/local_inference.py": "ee8ec251a528e070f088bf014a88d8bcd218f1d1d611fc6acf3495b855b391c7",
+    "mjon_os/provider_health.py": "36c97a661045837985384ceb8eb342ec7a72c49c5b471adef603f8a9fb0e4a45",
+    "mjon_os/jarvis_probe.py": "db962196b56a7f584f6e489e5c6d12cd369d9ab921d8d5229917588ad2012dbe",
+    "mjon_os/ollama_policy.py": "b6252a43ea37ef93710db6defa39f21c180cbce655be6f51defecdab1fdef02f",
+    "dodaios/plugins/brain/ollama.py": "e385af0cd5d6f12abcfe1e14bc7ed5e7f583548c4234647e9c6b80aacf88268f",
+    "dodaios/brain/manager.py": "6490b0eeac0fe927e6209f15f5a0c80722e493362f74954ded9cbc0680bb3435",
+    "dodaios/brain/resolver.py": "415e36ffa4a0e22594fd3153004282112d2c1886e9199567b9c15d37962df215"
+  },
+  "ollama_version": "0.40.14",
+  "model_inventory": [
+    {
+      "name": "qwen3:1.7b",
+      "model": "qwen3:1.7b",
+      "modified_at": "2026-11-05T22:15:54.872649724Z",
+      "size": 1359294303,
+      "digest": "0f45bae8cd2fec097cf09b400b078cf42388a1f5702f4058d2d6d641a09db46d",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen3",
+        "families": [
+          "qwen3"
+        ],
+        "parameter_size": "2.0B",
+        "quantization_level": "Q4_K_M",
+        "context_length": 40960,
+        "embedding_length": 2048,
+        "runner": "ggml"
+      },
+      "capabilities": [
+        "completion",
+        "tools",
+        "thinking"
+      ]
+    }
+  ],
+  "adapter_reply": "Dos m\u00e1s dos es cuatro.",
+  "quality_checks": {
+    "basic_arithmetic": true,
+    "tool_schema": true
+  },
+  "quality_limit": "A single arithmetic smoke check, not a reasoning or agent benchmark. Transport readiness is reported separately.",
+  "adapter_latency_s": 1.077,
+  "jarvis_brain_status": {
+    "state": "ready",
+    "model": "qwen3:1.7b",
+    "detail": "Actual JARVIS Ollama brain completed a local text response.",
+    "ready": true
+  },
+  "jarvis_brain_latency_s": 2.495,
+  "tool_call_output_not_executed": [
+    {
+      "id": "call_49h7j10r",
+      "name": "get_lab_status",
+      "input": {
+        "lab": "chemistry"
+      }
+    }
+  ],
+  "resident_models": [
+    {
+      "name": "qwen3:1.7b",
+      "model": "qwen3:1.7b",
+      "size": 1649651219,
+      "digest": "0f45bae8cd2fec097cf09b400b078cf42388a1f5702f4058d2d6d641a09db46d",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen3",
+        "families": [
+          "qwen3"
+        ],
+        "parameter_size": "2.0B",
+        "quantization_level": "Q4_K_M"
+      },
+      "expires_at": "2026-11-05T22:52:19.410957924Z",
+      "size_vram": 0,
+      "context_length": 2048,
+      "runner": "llamacpp"
+    }
+  ],
+  "sampled_peak_daemon_runner_aggregate_rss_bytes": 1750745088,
+  "memory_measurement_limit": "Sampled aggregate RSS of daemon+runner only; excludes KDE, GUI and probe subprocess. Shared pages may be counted twice. Not an 8 GiB hardware benchmark.",
+  "infrastructure_passed": true,
+  "passed": true
+}

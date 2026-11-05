@@ -22,6 +22,10 @@ with no changes to main and no final ISO publication.
   Ollama, cap reply output at 256 tokens, and disable the optional flash/ack
   model when it was never configured. The actual manager and background
   resolver cannot append cloud families while the native primary is Ollama.
+- Bare ONNX/OpenVINO library detection no longer selects a nonexistent chat
+  adapter. Catalog presence remains unverified.
+- Every health-record writer, including the HTTP setup-test path, stamps the
+  same evidence schema. Badge reads compare against the actual server config.
 - A nonstream response must be completed (`done: true`) and contain text.
   Downloaded or merely loaded weights remain unverified.
 - GUI and CLI migration verify the actual configured Ollama brain in a
@@ -41,10 +45,10 @@ with no changes to main and no final ISO publication.
 
 | Command / environment | Result | Meaning |
 |---|---|---|
-| `python -m unittest discover -s mjon_os/tests -p 'test_*.py' -v`, runtime dependencies installed | 133 passed | File, configuration, source, transport and stream regressions; not model inference |
-| Same native suite with the minimal host Python | 121 passed, 12 explicitly skipped | SDK-dependent tests are not silently counted as executed |
+| `python -m unittest discover -s mjon_os/tests -p 'test_*.py' -v`, runtime dependencies installed | 134 passed | File, configuration, source, transport and stream regressions; not model inference |
+| Same native suite with the minimal host Python | 122 passed, 12 explicitly skipped | SDK-dependent tests are not silently counted as executed |
 | Focused inherited pytest suites: Ollama, agent recovery, profiles, health checker, monitor, autostart, background/voice-key fallback chains | 174 passed | Existing non-native behavior and new shared behavior remain covered |
-| Recovery regressions copied onto untouched `b61e9175` | See `regressions-before.txt` | Demonstrates failures before repair; never interpreted as passing tests |
+| Recovery regressions copied onto untouched `b61e9175` | See `regressions-before.txt` | 15 failed, 1 passed on the prior source; never interpreted as passing tests |
 | `compileall`, `sh -n` for native launch/VM scripts, workflow YAML parsing, `git diff --check` | passed | Syntax and formatting only |
 
 Logs are in [evidence/mjon-recovery-2026-11-05](evidence/mjon-recovery-2026-11-05).
@@ -117,13 +121,22 @@ the workflow instead creates the network namespace with `sudo unshare -n`
 and calls `--worker`. That CI privilege is for test isolation, not a grant of
 root to production JARVIS.
 
+Additional targeted checks: 41 HTTP local-model route tests and 155 branding,
+packaging, monitor and workflow-policy tests passed. Workflow policy reports
+35 workflows and zero findings after pinning the inherited artifact actions.
+
 ## Image and USB boundary
 
 [Recovery build 42121159781](https://github.com/miqueas80/MJON-JARVIS-ULTIMATE/actions/runs/42121159781)
 passed real offline provider acceptance on GitHub, then failed staging because
 the acceptance run wrote generated model aliases into the hashed payload.
-No ISO was produced by that run. The corrected workflow uses a separate
-writable manifest store, preserving the immutable payload. The follow-up build
+No ISO was produced by that run. A second run,
+[42123141391](https://github.com/miqueas80/MJON-JARVIS-ULTIMATE/actions/runs/42123141391),
+also passed real inference but showed that Ollama writes new profile **blobs**
+as well as manifests. A directory-level blob link was insufficient. The
+corrected store uses a writable directory with individual links to immutable
+weight files. A fresh payload made read-only passed generation, tool schema,
+restart and before/after hash validation locally; see `real-immutable-payload.json`. The follow-up build
 result must be read from its Actions run; no final release is published.
 
 The VM payload marker tests that the packaged daemon starts and discovers the
@@ -162,3 +175,13 @@ silently. Disable opt-in preload with
 `systemctl --user disable --now mjon-ollama-preload.service`; stop the bundled
 daemon with `systemctl --user stop mjon-ollama.service`. A prior verified USB
 image remains the rollback for an experimental new image.
+
+## General CI findings
+
+The broader inherited CI is not claimed green. Its first recovery run also
+reported the legacy MJON-name test assumptions, an unscoped health-route test,
+and unpinned artifact actions; the corresponding code, expectations and gates
+have been repaired and tested. A frontend Verse audio timing test failed
+(`expected 3 to be 4`) in code unchanged by this recovery. The dependency-review
+action reports that Dependency graph is not enabled/supported on this
+repository. No security gate has been disabled to conceal either condition.

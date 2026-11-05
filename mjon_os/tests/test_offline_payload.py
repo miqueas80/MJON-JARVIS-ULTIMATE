@@ -53,11 +53,13 @@ class OfflinePayloadTests(unittest.TestCase):
             if exc.errno in (1, 13) or getattr(exc, "winerror", None) == 1314:
                 self.skipTest("Host does not permit filesystem symlinks")
             raise
-        self.assertTrue((store / "blobs").is_symlink())
+        self.assertFalse((store / "blobs").is_symlink())
+        self.assertTrue(next((store / "blobs").iterdir()).is_symlink())
         self.assertFalse((store / "manifests").is_symlink())
         self.assertFalse(initialize_model_store(self.payload, store))
         self.assertTrue((store / "manifests/registry.ollama.ai/library/tiny/test").is_file())
         (store / "manifests/registry.ollama.ai/library/tiny/profile-alias").write_text("user profile")
+        (store / "blobs/new-profile-config").write_text("new private config blob")
         validate_payload(self.payload)
 
     def test_foreign_user_store_is_preserved(self):

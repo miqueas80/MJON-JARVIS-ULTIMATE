@@ -361,7 +361,9 @@ async def run_setup_test(
         overall=_overall(server, checks, voice),
     )
     if persist:
+        from dodaios.local_models.health_monitor import generation_evidence
         payload = report.to_payload()
+        payload.update(generation_evidence(cfg, root=root))
         previous = load_last_report() or {}
         payload["since"] = (
             previous.get("since")

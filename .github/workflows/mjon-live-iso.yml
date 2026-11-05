@@ -136,6 +136,7 @@ jobs:
           sudo -E unshare -n "$(command -v python)" scripts/mjon_offline_acceptance.py \
             --worker --ollama "$RUNNER_TEMP/offline-payload/runtime/bin/ollama" \
             --models "$RUNNER_TEMP/acceptance-models" --model qwen3:1.7b \
+            --payload "$RUNNER_TEMP/offline-payload" \
             --output "$RUNNER_TEMP/offline-provider-evidence.json"
       - name: Create native live-build tree
         env:
@@ -277,7 +278,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Download the fully verified ISO from the preceding job
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: mjon-ai-os-developer-iso-${{ github.sha }}
           path: ${{ runner.temp }}/verified-iso

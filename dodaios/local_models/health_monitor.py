@@ -130,11 +130,11 @@ def load_last_report() -> dict[str, Any] | None:
     return payload
 
 
-def read_health_record() -> dict[str, Any]:
+def read_health_record(cfg: Any = None) -> dict[str, Any]:
     """The badge record: ``{status, reason, since, last_ok, checked_at}`` (file only)."""
     payload = load_last_report() or {}
     if payload.get("status") == "ok" and (not payload.get("evidence_context")
-                                          or payload.get("evidence_context") != _evidence_context()):
+                                          or payload.get("evidence_context") != _evidence_context(cfg)):
         payload = {**payload, "status": "unknown", "last_ok": None,
                    "reason": "Provider configuration changed; a fresh generation check is required."}
     return {
@@ -193,6 +193,12 @@ def _evidence_context(cfg: Any = None, *, root: str | None = None) -> str | None
     except Exception:
         log.debug("local-models: evidence context unavailable", exc_info=True)
         return None
+
+
+def generation_evidence(cfg: Any, *, root: str | None = None) -> dict[str, Any]:
+    """Stamp every successful generation writer with the same evidence schema."""
+    return {"health_evidence_version": _HEALTH_EVIDENCE_VERSION,
+            "evidence_context": _evidence_context(cfg, root=root)}
 
 
 def write_health_record(status: str, reason: str, *, checked_at: str | None = None,

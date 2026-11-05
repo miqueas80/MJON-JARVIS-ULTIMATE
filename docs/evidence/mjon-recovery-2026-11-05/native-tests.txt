@@ -7,6 +7,7 @@ test_headless_catalog_never_requires_gtk (test_ai_center.NativeAICenterTests.tes
 test_one_graphical_center_opens_real_kde_settings (test_ai_center.NativeAICenterTests.test_one_graphical_center_opens_real_kde_settings) ... ok
 test_agents_and_privileged_tasks_always_require_approval (test_ai_fabric.AIFabricTests.test_agents_and_privileged_tasks_always_require_approval) ... ok
 test_all_requested_domains_have_a_real_catalog_entry (test_ai_fabric.AIFabricTests.test_all_requested_domains_have_a_real_catalog_entry) ... ok
+test_bare_python_runtime_is_not_a_local_chat_engine (test_ai_fabric.AIFabricTests.test_bare_python_runtime_is_not_a_local_chat_engine) ... ok
 test_catalog_cannot_execute_network_install_commands (test_ai_fabric.AIFabricTests.test_catalog_cannot_execute_network_install_commands) ... ok
 test_eight_gigabyte_no_gpu_is_never_sent_to_workstation_only_engine (test_ai_fabric.AIFabricTests.test_eight_gigabyte_no_gpu_is_never_sent_to_workstation_only_engine) ... ok
 test_external_provider_is_not_mislabeled_as_locally_installed (test_ai_fabric.AIFabricTests.test_external_provider_is_not_mislabeled_as_locally_installed) ... ok
@@ -74,7 +75,7 @@ test_existing_payload_is_never_overwritten (test_offline_payload.OfflinePayloadT
 test_foreign_user_store_is_preserved (test_offline_payload.OfflinePayloadTests.test_foreign_user_store_is_preserved) ... ok
 test_live_store_links_weights_and_keeps_private_writable_manifests (test_offline_payload.OfflinePayloadTests.test_live_store_links_weights_and_keeps_private_writable_manifests) ... ok
 test_tampered_weight_is_rejected (test_offline_payload.OfflinePayloadTests.test_tampered_weight_is_rejected) ... ok
-test_actual_manager_chain_cannot_fall_through_to_cloud (test_ollama_recovery.ActualBrainPolicyTests.test_actual_manager_chain_cannot_fall_through_to_cloud) ... Executing <Task finished name='Task-27' coro=<ActualBrainPolicyTests.test_actual_manager_chain_cannot_fall_through_to_cloud() done, defined at /workspace/scratch/06f1a747b6b7/mjon-ai-os/mjon_os/tests/test_ollama_recovery.py:173> result=None created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.352 seconds
+test_actual_manager_chain_cannot_fall_through_to_cloud (test_ollama_recovery.ActualBrainPolicyTests.test_actual_manager_chain_cannot_fall_through_to_cloud) ... Executing <Task finished name='Task-27' coro=<ActualBrainPolicyTests.test_actual_manager_chain_cannot_fall_through_to_cloud() done, defined at /workspace/scratch/06f1a747b6b7/mjon-ai-os/mjon_os/tests/test_ollama_recovery.py:173> result=None created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.255 seconds
 ok
 test_discovery_uses_no_environment_proxy_or_redirect (test_ollama_recovery.ActualBrainPolicyTests.test_discovery_uses_no_environment_proxy_or_redirect) ... ok
 test_first_boot_sets_actual_typed_fallback_and_output_budget (test_ollama_recovery.ActualBrainPolicyTests.test_first_boot_sets_actual_typed_fallback_and_output_budget) ... ok
@@ -85,7 +86,7 @@ test_native_rejects_configured_remote_endpoint_before_sdk (test_ollama_recovery.
 test_native_rejects_explicit_cloud_model (test_ollama_recovery.ActualBrainPolicyTests.test_native_rejects_explicit_cloud_model) ... ok
 test_native_rejects_pinned_unknown_or_oversized_weights (test_ollama_recovery.ActualBrainPolicyTests.test_native_rejects_pinned_unknown_or_oversized_weights) ... ok
 test_native_rejects_remote_metadata (test_ollama_recovery.ActualBrainPolicyTests.test_native_rejects_remote_metadata) ... ok
-test_sdk_uses_no_environment_proxy (test_ollama_recovery.ActualBrainPolicyTests.test_sdk_uses_no_environment_proxy) ... Executing <Task finished name='Task-77' coro=<ActualBrainPolicyTests.test_sdk_uses_no_environment_proxy() done, defined at /workspace/scratch/06f1a747b6b7/mjon-ai-os/mjon_os/tests/test_ollama_recovery.py:118> result=None created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.824 seconds
+test_sdk_uses_no_environment_proxy (test_ollama_recovery.ActualBrainPolicyTests.test_sdk_uses_no_environment_proxy) ... Executing <Task finished name='Task-77' coro=<ActualBrainPolicyTests.test_sdk_uses_no_environment_proxy() done, defined at /workspace/scratch/06f1a747b6b7/mjon-ai-os/mjon_os/tests/test_ollama_recovery.py:118> result=None created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.578 seconds
 ok
 test_upstream_mode_preserves_user_lan_and_model (test_ollama_recovery.ActualBrainPolicyTests.test_upstream_mode_preserves_user_lan_and_model) ... ok
 test_cloud_alias_with_latest_tag_is_still_remote (test_ollama_recovery.AdapterRecoveryTests.test_cloud_alias_with_latest_tag_is_still_remote) ... ok
@@ -135,6 +136,6 @@ test_screenshot_never_attaches_host_disk_or_network (test_vm_capture.VMCaptureCo
 test_uefi_boot_keeps_firmware_variables_disposable (test_vm_capture.VMCaptureCommandTests.test_uefi_boot_keeps_firmware_variables_disposable) ... ok
 
 ----------------------------------------------------------------------
-Ran 133 tests in 3.150s
+Ran 134 tests in 2.145s
 
 OK

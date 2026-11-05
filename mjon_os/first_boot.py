@@ -24,6 +24,44 @@ _OVERRIDES = {
     ('brain', 'routing_provider'): 'ollama',
     ('brain', 'routing_model'): '',
 }
+_NATIVE_BRAIN_OPTIONS = {"local_fallback": "ollama", "local_fallback_model": "",
+                         "max_tokens": 256}
+
+
+def _patch_brain_options(source: str) -> str:
+    """Set real typed BrainConfig fields absent from the legacy sample.
+
+    The sample's `fallback` key is not BrainConfig.local_fallback. Editing only
+    that legacy key leaves the actual fallback and output budget cloud-sized.
+    """
+    table = ""
+    seen = set()
+    output = []
+    def append_missing():
+        for key, value in _NATIVE_BRAIN_OPTIONS.items():
+            if key not in seen:
+                output.append(f"{key} = {json.dumps(value)}\n")
+    for line in source.splitlines(keepends=True):
+        section = re.match(r'^\s*\[([^\]]+)\]\s*(?:#.*)?$', line.strip())
+        if section:
+            if table == "brain":
+                append_missing()
+            table = section.group(1).strip()
+        assignment = re.match(r'^(\s*)([a-zA-Z_][a-zA-Z_0-9-]*)\s*=(.*)$', line)
+        if table == "brain" and assignment and assignment.group(2) in _NATIVE_BRAIN_OPTIONS:
+            key = assignment.group(2)
+            output.append(f"{key} = {json.dumps(_NATIVE_BRAIN_OPTIONS[key])}\n")
+            seen.add(key)
+        else:
+            output.append(line)
+    if table == "brain":
+        if output and not output[-1].endswith("\n"):
+            output[-1] += "\n"
+        append_missing()
+    result = "".join(output)
+    if "ack_brain" not in tomllib.loads(result):
+        result += "\n[ack_brain]\nenabled = false\n"
+    return result
 
 
 def personalize_template(source: str, data_directory: Path) -> str:
@@ -56,7 +94,7 @@ def personalize_template(source: str, data_directory: Path) -> str:
     if seen != set(overrides):
         missing = ', '.join(f'{table}.{key}' for table, key in sorted(set(overrides) - seen))
         raise ValueError('Native config template missing required settings: ' + missing)
-    personalized = ''.join(result)
+    personalized = _patch_brain_options(''.join(result))
     # Refuse a malformed template rather than leaving an unbootable profile.
     parsed = tomllib.loads(personalized)
     if not all(part in parsed for part in ('memory', 'stt', 'autostart')):
@@ -122,10 +160,17 @@ def activate_local_brain(config_file: Path) -> bool:
     brain = settings.get('brain')
     if not isinstance(brain, dict):
         raise ValueError('Falta la sección [brain] de la configuración.')
-    if all(brain.get(key) == value for key, value in _LOCAL_BRAIN_DEFAULTS.items()):
+    is_local = all(brain.get(key) == value for key, value in _LOCAL_BRAIN_DEFAULTS.items())
+    if (is_local and "ack_brain" in settings
+            and all(brain.get(key) == value for key, value in _NATIVE_BRAIN_OPTIONS.items())):
         return False
-    if any(brain.get(key) != value for key, value in _CLOUD_BRAIN_DEFAULTS.items()):
+    if not is_local and any(brain.get(key) != value for key, value in _CLOUD_BRAIN_DEFAULTS.items()):
         raise ValueError('El proveedor ya fue personalizado; no se cambiará automáticamente.')
+    inherited = {"local_fallback": "claude-api", "local_fallback_model": "claude-haiku-4-5-20251001",
+                 "max_tokens": 32768}
+    if any(key in brain and brain[key] not in (value, inherited[key])
+           for key, value in _NATIVE_BRAIN_OPTIONS.items()):
+        raise ValueError("The local fallback or output budget was customized; refusing automatic migration.")
 
     table = ''
     seen: set[str] = set()
@@ -143,10 +188,12 @@ def activate_local_brain(config_file: Path) -> bool:
             output.append(line)
     if seen != set(_LOCAL_BRAIN_DEFAULTS):
         raise ValueError('No se encontraron todas las opciones de [brain].')
-    updated = ''.join(output)
+    updated = _patch_brain_options(''.join(output))
     tomllib.loads(updated)
 
     backup = config_file.with_suffix(config_file.suffix + '.bak')
+    if is_local and backup.exists():
+        backup = config_file.with_suffix(config_file.suffix + '.native-recovery.bak')
     # O_EXCL prevents overwriting an existing backup (including a symlink).
     with os.fdopen(os.open(backup, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600),
                    'w', encoding='utf-8') as handle:

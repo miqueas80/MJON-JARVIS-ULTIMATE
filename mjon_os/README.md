@@ -2,6 +2,14 @@
 
 **One product, one codebase.** This repository contains the operating-system image definition and the Dodaios-derived intelligence engine. There is no separate Jarvis app repository and no second runtime.
 
+Recovery evidence: [initial audit](../docs/MJON_RECOVERY_AUDIT_2026-11-05.md)
+and [verified results and remaining blockers](../docs/MJON_RECOVERY_RESULTS_2026-11-05.md).
+The base profile still omits inference weights. The recovery profile can
+explicitly embed a hash-checked CPU Ollama/model payload using
+`mjon_os.image_builder --offline-payload /path/to/reviewed-payload`.
+That choice starts its loopback/cloud-disabled user service; no download occurs
+at login. This does not supply offline speech or guarantee USB persistence.
+
 ## Architecture
 
 - **Base OS:** Debian 13 (trixie), amd64, KDE Plasma via `live-task-kde`.
@@ -80,8 +88,9 @@ The optional [experimental USB ISO workflow](../.github/workflows/mjon-live-iso.
 
 ## Release blockers — NOT a finished OS
 
-- Build an actual `.iso` artifact successfully and validate boot on UEFI and BIOS VMs.
-- Validate KDE login, agent service startup, and first-run configuration in the live image.
+- Repeat ISO construction and BIOS/UEFI tests for every corrected image. The
+  older `70997acb` image passed VM boot, but lacks later provider defaults and weights.
+- Repeat KDE login, agent service startup and first-run checks for the corrected image.
 - Verify the upstream frontend assets are bundled in the wheel and the desktop UI is usable.
 - Test STT, TTS, wake word and GUI automation under KDE Wayland; assess permissions and portal behavior.
 - Verify offline command execution and disclose that local LLM model weights are not yet bundled.

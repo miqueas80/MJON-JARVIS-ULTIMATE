@@ -57,6 +57,8 @@ class OfflinePayloadTests(unittest.TestCase):
         self.assertFalse((store / "manifests").is_symlink())
         self.assertFalse(initialize_model_store(self.payload, store))
         self.assertTrue((store / "manifests/registry.ollama.ai/library/tiny/test").is_file())
+        (store / "manifests/registry.ollama.ai/library/tiny/profile-alias").write_text("user profile")
+        validate_payload(self.payload)
 
     def test_foreign_user_store_is_preserved(self):
         store = self.root / "user-store"

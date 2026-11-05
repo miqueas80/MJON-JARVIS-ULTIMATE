@@ -1,0 +1,85 @@
+{
+  "kind": "real-model-network-isolated-provider-test",
+  "desktop_or_physical_hardware_test": false,
+  "interfaces": [
+    "lo"
+  ],
+  "external_connect_failure": "[Errno 101] Network is unreachable",
+  "physical_ram_bytes": 10451423232,
+  "model": "qwen3:0.6b",
+  "binary_sha256": "4a525117528467da41be4188ef8efbc3dbbca9da420fb25cd61cf49d104732fd",
+  "checks": {
+    "download_visible": true,
+    "preload_is_unverified": true,
+    "adapter_nonempty_completed_response": true,
+    "adapter_verified": true,
+    "actual_jarvis_brain_completed": true,
+    "proxy_poisoning_ignored": true,
+    "missing_model_refused": true,
+    "stopped_server_not_green": true,
+    "startup_preload_after_restart": true,
+    "recovery_after_restart": true
+  },
+  "ollama_version": "0.40.14",
+  "model_inventory": [
+    {
+      "name": "qwen3:0.6b",
+      "model": "qwen3:0.6b",
+      "modified_at": "2026-11-05T22:07:20.444815125Z",
+      "size": 522653767,
+      "digest": "7df6b6e09427a769808717c0a93cadc4ae99ed4eb8bf5ca557c90846becea435",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen3",
+        "families": [
+          "qwen3"
+        ],
+        "parameter_size": "751.63M",
+        "quantization_level": "Q4_K_M",
+        "context_length": 40960,
+        "embedding_length": 1024,
+        "runner": "ggml"
+      },
+      "capabilities": [
+        "completion",
+        "tools",
+        "thinking"
+      ]
+    }
+  ],
+  "adapter_reply": "Dos m\u00e1s dos es siete.",
+  "adapter_latency_s": 24.176,
+  "jarvis_brain_status": {
+    "state": "ready",
+    "model": "qwen3:0.6b",
+    "detail": "Actual JARVIS Ollama brain completed a local text response.",
+    "ready": true
+  },
+  "jarvis_brain_latency_s": 4.84,
+  "resident_models": [
+    {
+      "name": "qwen3:0.6b",
+      "model": "qwen3:0.6b",
+      "size": 783663757,
+      "digest": "7df6b6e09427a769808717c0a93cadc4ae99ed4eb8bf5ca557c90846becea435",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen3",
+        "families": [
+          "qwen3"
+        ],
+        "parameter_size": "751.63M",
+        "quantization_level": "Q4_K_M"
+      },
+      "expires_at": "2026-11-05T22:17:36.403832936Z",
+      "size_vram": 0,
+      "context_length": 2048,
+      "runner": "llamacpp"
+    }
+  ],
+  "sampled_peak_daemon_runner_aggregate_rss_bytes": 892760064,
+  "memory_measurement_limit": "Sampled aggregate RSS of daemon+runner only; excludes KDE, GUI and probe subprocess. Shared pages may be counted twice. Not an 8 GiB hardware benchmark.",
+  "passed": true
+}

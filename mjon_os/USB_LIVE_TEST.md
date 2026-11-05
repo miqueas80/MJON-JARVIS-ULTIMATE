@@ -73,4 +73,9 @@ journalctl --user -u mjon-jarvis.service -b --no-pager -n 100
 - Unapproved disk modifications or requests for elevated permissions: stop the experiment.
 - Hardware-specific changes remain out of scope until a VM and ISO build pass.
 
-**Current status:** candidate build automation and VM validation pending. **No release ISO is approved for USB testing yet.**
+**Recorded status:** the `70997acb` experimental build passed BIOS/UEFI VM
+boot, account, Plasma, user-service and HTTP API checks. It predates later
+provider defaults and contains no Ollama weights. See the
+[recovery results](../docs/MJON_RECOVERY_RESULTS_2026-11-05.md) for the corrected
+payload profile and its separate real inference evidence. Check the exact new
+build result and checksum before any hardware trial; no final ISO is approved.

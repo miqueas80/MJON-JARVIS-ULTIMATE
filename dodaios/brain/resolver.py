@@ -582,6 +582,10 @@ def _resolve_chain(config: JarvisConfig) -> list[tuple[str, str | None]]:
 
     Duplicates are filtered — the same (provider, model) pair appears only once.
     """
+    from mjon_os.ollama_policy import native_mode
+    if native_mode() and config.brain.primary == "ollama":
+        provider = config.brain.providers.get("ollama")
+        return [("ollama", getattr(provider, "model", None) or None)]
     chain: list[tuple[str, str | None]] = []
 
     # Stage 1 — override (power user)

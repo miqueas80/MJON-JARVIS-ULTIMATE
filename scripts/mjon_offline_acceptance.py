@@ -69,6 +69,13 @@ def worker(args) -> dict:
                 "interfaces": interfaces, "external_connect_failure": blocked,
                 "physical_ram_bytes": physical_memory(), "model": args.model,
                 "binary_sha256": digest(args.ollama), "checks": {}}
+    revision = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT,
+                              capture_output=True, text=True, check=False)
+    evidence["source_commit"] = revision.stdout.strip() if revision.returncode == 0 else None
+    sources = ("mjon_os/first_boot.py", "mjon_os/local_inference.py", "mjon_os/provider_health.py",
+               "mjon_os/jarvis_probe.py", "mjon_os/ollama_policy.py", "dodaios/plugins/brain/ollama.py",
+               "dodaios/brain/manager.py", "dodaios/brain/resolver.py")
+    evidence["source_file_sha256"] = {path: digest(ROOT / path) for path in sources}
     checks = evidence["checks"]
     env = {key: value for key, value in os.environ.items() if "proxy" not in key.lower()}
     env.update(OLLAMA_HOST="127.0.0.1:11434", OLLAMA_MODELS=str(args.models),

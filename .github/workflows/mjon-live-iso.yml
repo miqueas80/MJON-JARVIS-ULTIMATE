@@ -1,4 +1,5 @@
 # Experimental ISO builder. Runs only when this workflow changes or is explicitly dispatched.
+# Recovery 2 also verifies typed local fallback/output defaults and cloud-free chains.
 # Unified AI fabric v1: opt-in module catalog, local-only Ollama adapter,
 # GTK Control Center (with KDE fallback), conservative zram/AppArmor baseline,
 # and explicit ISO-chroot import checks. NO optional engines auto-installed.
@@ -94,11 +95,11 @@ jobs:
             --exclude='lib/ollama/cuda*' --exclude='lib/ollama/mlx*'
           curl -fsSL --retry 3 -o "$RUNNER_TEMP/ollama-cpu/LICENSE" \
             https://raw.githubusercontent.com/ollama/ollama/v0.40.14/LICENSE
-          python -m pip install openai==3.46.0 httpx pydantic-settings structlog loguru keyring psutil pyyaml tomlkit
+          python -m pip install openai==3.46.0 httpx pydantic-settings structlog loguru keyring psutil pyyaml tomlkit aiosqlite
           python - <<'PY'
           import json, os, subprocess, time, urllib.request
           from pathlib import Path
-          from mjon_os.offline_payload import create_payload
+          from mjon_os.offline_payload import create_payload, initialize_model_store
           base = Path(os.environ['RUNNER_TEMP'])
           runtime = base / 'ollama-cpu'
           env = {**os.environ, 'OLLAMA_HOST':'127.0.0.1:11434',
@@ -123,6 +124,7 @@ jobs:
                   server.wait(timeout=20)
           create_payload(runtime, base/'ollama-models', base/'offline-payload', model='qwen3:1.7b',
                          runtime_version='0.40.14', archive_sha256='993e83d08c3d13d17c55009a3e2664c8a25445e644aec3a68bef5abb6abce67d')
+          initialize_model_store(base/'offline-payload', base/'acceptance-models')
           PY
       - name: Test the real bundled provider with external networking removed
         if: github.ref_name == 'recovery/mjon-ai-os-stability-20261105'
@@ -133,7 +135,7 @@ jobs:
           # The production desktop still uses ordinary user services.
           sudo -E unshare -n "$(command -v python)" scripts/mjon_offline_acceptance.py \
             --worker --ollama "$RUNNER_TEMP/offline-payload/runtime/bin/ollama" \
-            --models "$RUNNER_TEMP/offline-payload/models" --model qwen3:1.7b \
+            --models "$RUNNER_TEMP/acceptance-models" --model qwen3:1.7b \
             --output "$RUNNER_TEMP/offline-provider-evidence.json"
       - name: Create native live-build tree
         env:

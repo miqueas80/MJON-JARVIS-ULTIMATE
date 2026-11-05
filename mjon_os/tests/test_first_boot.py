@@ -45,6 +45,9 @@ class FirstBootTests(unittest.TestCase):
         self.assertEqual(decoded['brain']['deep_brain'], 'ollama')
         self.assertEqual(decoded['brain']['routing_provider'], 'ollama')
         self.assertEqual(decoded['brain']['routing_model'], '')
+        self.assertEqual(decoded['brain']['local_fallback'], 'ollama')
+        self.assertEqual(decoded['brain']['local_fallback_model'], '')
+        self.assertEqual(decoded['brain']['max_tokens'], 256)
 
 
     def test_personalization_preserves_other_fields_and_sets_jarvis(self):

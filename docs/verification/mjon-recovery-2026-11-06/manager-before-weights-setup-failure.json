@@ -1,0 +1,18 @@
+{
+  "reply": "Lo siento: no puedo comunicarme con mi proveedor ahora mismo; probablemente sea un problema de red o del proveedor. Int\u00e9ntalo de nuevo en un momento.",
+  "latency_s": 0.912,
+  "active_provider": "ollama",
+  "failed_providers": {},
+  "http_chat_requests": 0,
+  "system_prompt_characters": 4932,
+  "tools_registered": 0,
+  "kind": "real-manager-text-only-no-tools",
+  "source_commit": "8f156309daaf00263025569e7632e81a513e577e",
+  "interfaces": [
+    "lo"
+  ],
+  "external_connect_failure": "[Errno 101] Network is unreachable",
+  "gui_test": false,
+  "physical_hardware_test": false,
+  "passed": false
+}

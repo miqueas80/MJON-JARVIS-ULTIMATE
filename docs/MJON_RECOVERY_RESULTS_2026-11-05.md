@@ -162,9 +162,10 @@ internal Windows disk.
   microphone, webcam, permission/cancellation and Windows-return tests.
 - Complete offline STT, TTS and wake word: the inherited voice defaults remain
   cloud-oriented and their offline replacements have not passed acceptance.
-- Full chat manager/agent orchestration, real tool execution through approval
-  gates, long prompts and task quality. A successful provider and tool-schema
-  probe do not establish those capabilities.
+- Full desktop chat and agent orchestration, real tool execution through
+  approval gates, long prompts and task quality. The real manager text turn
+  below covers one fresh configuration with no registered tools, not these
+  broader capabilities.
 - Local vision model, persistent USB memory, reboot recovery, backups and
   audited per-agent confinement. Installing security packages is insufficient.
 - Conclusive Doraimon incident attribution: the specific installation,
@@ -190,3 +191,45 @@ have been repaired and tested. A frontend Verse audio timing test failed
 (`expected 3 to be 4`) in code unchanged by this recovery. The dependency-review
 action reports that Dependency graph is not enabled/supported on this
 repository. No security gate has been disabled to conceal either condition.
+
+## Additional real manager turn — 2026-11-06
+
+The production `BrainManager.generate` also completed a text summarization
+turn through the actual plugin registry, native fresh profile and Ollama SDK,
+without mocks or registered tools. Runtime source: `8f156309daaf00263025569e7632e81a513e577e`;
+the new acceptance script was uncommitted at execution, recorded as dirty with
+its exact SHA256. Runtime/manager source hashes are retained separately.
+Ollama 0.40.14 and the same digest-pinned Qwen3 1.7B weights were used. Only
+loopback existed; external connect returned ENETUNREACH; proxies were poisoned.
+
+The generic reproducible script returned in 13.146 seconds, with one actual
+`/v1/chat/completions` request and no failed provider. Its reply was:
+"El laboratorio conserva sus documentos en la computadora y trabaja sin
+conexión." The runner logged 1,124 input tokens, context 2,048 and
+`truncated = 0`; no truncation was reported. This is one text smoke test,
+not general reasoning quality, full GUI chat, tool execution or an Intel
+8 GiB measurement. The host has approximately 9.73 GiB physical RAM.
+
+An earlier setup attempt was launched before the weights finished preparing:
+it made zero chat requests and returned the provider-unavailable message.
+That record is preserved as a setup failure, not a valid generation or a
+regression attributed to the downloaded model. The completed setup was
+verified before rerunning.
+
+Reproduce with installed fork/provider dependencies and existing reviewed
+runtime/weights, using a private writable model store (profile aliases may
+be created; the immutable payload should use individual weight links):
+
+```sh
+python scripts/mjon_manager_acceptance.py \
+  --ollama /absolute/path/runtime/bin/ollama \
+  --models /absolute/path/private-model-store \
+  --output /absolute/path/new-manager-record.json
+```
+
+The script downloads nothing and uses a fresh temporary config/data directory.
+It fails if external interfaces exist, no model is ready, no actual chat HTTP
+request occurs, a provider fails, or runner truncation evidence is absent or
+unsafe for this short turn. Its summary criterion is intentionally narrow.
+See `verification/mjon-recovery-2026-11-06/real-manager-text.json` and the
+corresponding log. The in-guest ISO generation gate remains a separate test.

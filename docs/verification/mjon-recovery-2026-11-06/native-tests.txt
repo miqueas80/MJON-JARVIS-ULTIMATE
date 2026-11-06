@@ -1,0 +1,7 @@
+..............................................................................Executing <Task finished name='Task-27' coro=<ActualBrainPolicyTests.test_actual_manager_chain_cannot_fall_through_to_cloud() done, defined at /workspace/scratch/06f1a747b6b7/mjon-ai-os/mjon_os/tests/test_ollama_recovery.py:175> result=None created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.129 seconds
+..........Executing <Task finished name='Task-77' coro=<ActualBrainPolicyTests.test_sdk_uses_no_environment_proxy() done, defined at /workspace/scratch/06f1a747b6b7/mjon-ai-os/mjon_os/tests/test_ollama_recovery.py:118> result=None created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.297 seconds
+....................................................
+----------------------------------------------------------------------
+Ran 140 tests in 1.219s
+
+OK

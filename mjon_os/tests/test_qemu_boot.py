@@ -53,6 +53,28 @@ class BootProbeTests(unittest.TestCase):
         self.assertTrue(evidence.api)
         self.assertTrue(evidence.payload_required)
         self.assertFalse(evidence.payload)
+        self.assertFalse(evidence.inference)
+
+    @unittest.skipUnless(os.name == "posix", "subprocess pipes are POSIX-only")
+    def test_collector_waits_for_generation_after_model_discovery(self):
+        from mjon_os.qemu_boot import _collect_until_graphical_ready
+        markers = ("OLLAMA_PAYLOAD_REQUIRED", "KERNEL_RUNNING", "DISPLAY_MANAGER_ACTIVE",
+                   "LIVE_USER_READY", "PLASMA_DESKTOP_ACTIVE", "JARVIS_SERVICE_STABLE",
+                   "JARVIS_API_READY", "OLLAMA_PAYLOAD_READY")
+        script = "import time; " + "; ".join(
+            f"print('MJON_VM_PROOF {marker}', flush=True)" for marker in markers)
+        script += ("; time.sleep(.1); print('MJON_VM_PROOF JARVIS_LOCAL_INFERENCE_READY', "
+                   "flush=True); time.sleep(30)")
+        child = subprocess.Popen([sys.executable, "-c", script], stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
+        try:
+            output = _collect_until_graphical_ready(child, 5)
+            evidence = analyze_serial_log(output)
+            self.assertTrue(evidence.payload)
+            self.assertTrue(evidence.inference)
+        finally:
+            child.kill()
+            child.communicate(timeout=5)
 
     @unittest.skipUnless(os.name == "posix", "subprocess pipes are POSIX-only")
     def test_collector_waits_for_required_payload_and_keeps_failure_diagnostics(self):
@@ -88,6 +110,7 @@ class BootProbeTests(unittest.TestCase):
             self.assertIn("-nic", cmd)
             self.assertEqual(cmd[cmd.index("-nic") + 1], "none")
             self.assertIn("-snapshot", cmd)
+            self.assertEqual(cmd[cmd.index("-m") + 1], "4096")
             self.assertIn("-cdrom", cmd)
             self.assertNotIn("-drive", cmd)
             self.assertNotIn("-hda", cmd)

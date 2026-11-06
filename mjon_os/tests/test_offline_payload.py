@@ -2,6 +2,7 @@
 from __future__ import annotations
 import hashlib
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -44,6 +45,19 @@ class OfflinePayloadTests(unittest.TestCase):
         with self.assertRaises(FileExistsError):
             create_payload(self.runtime, self.models, self.payload, model="tiny:test",
                            runtime_version="test", archive_sha256="0"*64)
+
+    @unittest.skipUnless(os.name == "posix", "Live ISO access uses POSIX permissions")
+    def test_private_download_permissions_are_not_shipped_to_the_live_user(self):
+        blob = next((self.models / "blobs").iterdir())
+        blob.chmod(0o600)
+        (self.models / "blobs").chmod(0o700)
+        output = self.root / "readable-payload"
+        create_payload(self.runtime, self.models, output, model="tiny:test",
+                       runtime_version="test-fixture", archive_sha256="0"*64)
+        self.assertEqual((output / "models/blobs").stat().st_mode & 0o777, 0o755)
+        self.assertEqual((output / "models/blobs" / blob.name).stat().st_mode & 0o777, 0o644)
+        self.assertEqual((output / "manifest.json").stat().st_mode & 0o777, 0o644)
+        self.assertEqual(blob.stat().st_mode & 0o777, 0o600)
 
     def test_live_store_links_weights_and_keeps_private_writable_manifests(self):
         store = self.root / "user-store"

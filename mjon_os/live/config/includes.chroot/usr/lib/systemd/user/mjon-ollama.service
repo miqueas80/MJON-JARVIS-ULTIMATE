@@ -17,4 +17,6 @@ Restart=on-failure
 RestartSec=10
 NoNewPrivileges=yes
 PrivateTmp=yes
-TimeoutStartSec=120
+# Full image-integrity verification is deliberately retained. A cold squashfs
+# under CPU emulation can take longer than a native workstation hash scan.
+TimeoutStartSec=600

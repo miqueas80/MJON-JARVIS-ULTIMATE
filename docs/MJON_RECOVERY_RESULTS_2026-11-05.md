@@ -136,12 +136,17 @@ also passed real inference but showed that Ollama writes new profile **blobs**
 as well as manifests. A directory-level blob link was insufficient. The
 corrected store uses a writable directory with individual links to immutable
 weight files. A fresh payload made read-only passed generation, tool schema,
-restart and before/after hash validation locally; see `real-immutable-payload.json`. The follow-up build
-result must be read from its Actions run; no final release is published.
+restart and before/after hash validation locally; see `real-immutable-payload.json`.
+The 0f7ab29 image then built but failed daemon discovery in the BIOS guest.
+JARVIS HTTP had responded; its marker was incorrectly delayed until Ollama
+succeeded. UEFI was not reached and no verified ISO was uploaded. The
+[boot recovery record](MJON_BOOT_RECOVERY_2026-11-06.md) separates this failure,
+the diagnostic build, and the stronger subsequent guest-generation gate.
 
-The VM payload marker tests that the packaged daemon starts and discovers the
-packaged model. It does **not** claim inference inside QEMU or full interaction
-with the desktop assistant. The network-isolated provider acceptance is a
+The original VM payload marker tests daemon startup and model discovery,
+not inference. The follow-up source separately requires actual configured-brain
+generation for a bundled image; its new VM outcome must be recorded before
+claiming that test passed. Neither probe establishes full desktop interaction. The network-isolated provider acceptance is a
 separate test on the builder. Exact ISO checksum and source commit must travel
 with any artifact used for hardware testing.
 

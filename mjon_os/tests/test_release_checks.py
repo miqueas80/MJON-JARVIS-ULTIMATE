@@ -82,6 +82,26 @@ class USBReleaseTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "UEFI"):
                 check_candidate(iso, sha, boot, bios, uefi, min_bytes=1)
 
+    def test_discovered_payload_without_real_jarvis_generation_is_refused(self):
+        with TemporaryDirectory() as tmp:
+            inputs = self._inputs(Path(tmp))
+            bios = inputs[3]
+            bios.write_text(bios.read_text() +
+                            "MJON_VM_PROOF OLLAMA_PAYLOAD_REQUIRED\n"
+                            "MJON_VM_PROOF OLLAMA_PAYLOAD_READY\n")
+            with self.assertRaisesRegex(ValueError, "inference"):
+                check_candidate(*inputs, min_bytes=1)
+
+    def test_payload_with_real_jarvis_generation_is_accepted(self):
+        with TemporaryDirectory() as tmp:
+            inputs = self._inputs(Path(tmp))
+            for log in inputs[3:]:
+                log.write_text(log.read_text() +
+                               "MJON_VM_PROOF OLLAMA_PAYLOAD_REQUIRED\n"
+                               "MJON_VM_PROOF OLLAMA_PAYLOAD_READY\n"
+                               "MJON_VM_PROOF JARVIS_LOCAL_INFERENCE_READY\n")
+            self.assertTrue(check_candidate(*inputs, min_bytes=1, max_bytes=1000))
+
     def test_release_asset_limit_fail_closed(self):
         with TemporaryDirectory() as tmp:
             with self.assertRaisesRegex(ValueError, "size"):

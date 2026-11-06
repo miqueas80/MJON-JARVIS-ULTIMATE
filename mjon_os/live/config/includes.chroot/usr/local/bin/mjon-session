@@ -17,8 +17,10 @@ engine=/opt/mjon-ai-os/venv/bin/python
 if [ -f /opt/mjon-ai-os/ollama/manifest.json ]; then
   export PATH="/opt/mjon-ai-os/ollama/runtime/bin:$PATH"
   export OLLAMA_MODELS="$HOME/.local/share/mjon-ai-os/ollama-models"
-  if ! systemctl --user start mjon-ollama.service; then
-    echo 'MJON: bundled Ollama failed; keeping the desktop available for diagnosis.' >&2
+  # Queue the independent engine without blocking the desktop on cold image
+  # verification. Successful queueing is not provider or model readiness.
+  if ! systemctl --user start --no-block mjon-ollama.service; then
+    echo 'MJON: could not queue bundled Ollama startup; keeping the desktop available for diagnosis.' >&2
   fi
 fi
 "$engine" -m mjon_os.first_boot \

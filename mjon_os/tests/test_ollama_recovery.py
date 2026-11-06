@@ -163,6 +163,8 @@ class ActualBrainPolicyTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(config.brain.local_fallback_model, "")
         self.assertLess(config.brain.max_tokens, 2048)
         self.assertFalse(config.ack_brain.enabled)
+        from dodaios.safety.risk_tier import RiskTierEvaluator
+        self.assertFalse(RiskTierEvaluator(config.safety).bypass_permissions)
 
     async def test_native_background_resolver_cannot_append_keyed_cloud_families(self):
         from dodaios.brain.resolver import _resolve_chain

@@ -42,6 +42,9 @@ def check_candidate(iso: Path, checksum: Path, boot_records: Path,
         if ("MJON_VM_PROOF OLLAMA_PAYLOAD_REQUIRED" in log
                 and "MJON_VM_PROOF OLLAMA_PAYLOAD_READY" not in log):
             raise ValueError(f"Missing {label} VM bundled Ollama readiness proof")
+        if ("MJON_VM_PROOF OLLAMA_PAYLOAD_REQUIRED" in log
+                and "MJON_VM_PROOF JARVIS_LOCAL_INFERENCE_READY" not in log):
+            raise ValueError(f"Missing {label} VM actual JARVIS local inference proof")
         if "MJON_VM_EVIDENCE kernel=True userspace=True" not in log:
             raise ValueError(f"Missing {label} VM kernel/userspace proof")
         if ("MJON_VM_EVIDENCE kernel=True userspace=True live_user=True" not in log

@@ -1,5 +1,5 @@
 # Experimental ISO builder. Runs only when this workflow changes or is explicitly dispatched.
-# Recovery 2 also verifies typed local fallback/output defaults and cloud-free chains.
+# Recovery also requires actual configured-brain generation inside the Live VM.
 # Unified AI fabric v1: opt-in module catalog, local-only Ollama adapter,
 # GTK Control Center (with KDE fallback), conservative zram/AppArmor baseline,
 # and explicit ISO-chroot import checks. NO optional engines auto-installed.
@@ -216,10 +216,10 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends qemu-system-x86 ovmf
           iso="$MJON_CI_TMP/mjon-live/MJON-AI-OS-dev-amd64.iso"
-          python -m mjon_os.qemu_boot --iso "$iso" --timeout 420 \
+          python -m mjon_os.qemu_boot --iso "$iso" --timeout 1200 \
             --log "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
           python -m mjon_os.qemu_boot --iso "$iso" \
-            --uefi-firmware /usr/share/OVMF/OVMF_CODE_4M.fd --timeout 420 \
+            --uefi-firmware /usr/share/OVMF/OVMF_CODE_4M.fd --timeout 1200 \
             --log "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
           # Hardware exposed a broken Live login: the greeter alone is not enough.
           # The replacement guest proof must exercise user/live PAM authentication.
@@ -241,6 +241,8 @@ jobs:
           if [ -d "$MJON_CI_TMP/offline-payload" ]; then
             grep -Fq 'MJON_VM_PROOF OLLAMA_PAYLOAD_READY' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
             grep -Fq 'MJON_VM_PROOF OLLAMA_PAYLOAD_READY' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
+            grep -Fq 'MJON_VM_PROOF JARVIS_LOCAL_INFERENCE_READY' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
+            grep -Fq 'MJON_VM_PROOF JARVIS_LOCAL_INFERENCE_READY' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
           fi
       - name: Upload experimental ISO for virtual-machine testing (not release)
         if: success()
@@ -264,6 +266,7 @@ jobs:
         with:
           name: mjon-ai-os-iso-build-diagnostics-${{ github.run_id }}
           path: |
+            ${{ runner.temp }}/offline-provider-evidence.json
             ${{ runner.temp }}/mjon-live/mjon-build.log
             ${{ runner.temp }}/mjon-live/mjon-build.json
             ${{ runner.temp }}/mjon-live/boot-bios-serial.txt

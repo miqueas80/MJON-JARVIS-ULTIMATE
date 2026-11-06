@@ -86,11 +86,20 @@ def create_payload(runtime: Path, models: Path, destination: Path, *, model: str
         shutil.copytree(runtime / "lib/ollama", destination / "runtime/lib/ollama",
                         ignore=shutil.ignore_patterns("cuda*", "rocm*", "vulkan*", "mlx*"))
         shutil.copytree(models, destination / "models")
+        # ISO files become root-owned. Do not preserve private permissions
+        # from the builder's download cache: the Live user must read them.
+        for path in [destination, *destination.rglob("*")]:
+            if path.is_dir():
+                path.chmod(0o755)
+            elif path.is_file():
+                executable = bool(path.stat().st_mode & 0o111) or path == destination / "runtime/bin/ollama"
+                path.chmod(0o755 if executable else 0o644)
         manifest = {"format": 1, "model": model, "runtime_version": runtime_version,
                     "source_archive_sha256": archive_sha256,
                     "policy": "CPU, loopback, cloud disabled; no model downloads at login",
                     "files": _files(destination)}
         (destination / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+        (destination / "manifest.json").chmod(0o644)
         validate_payload(destination)
         return manifest
     except BaseException:

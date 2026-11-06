@@ -15,6 +15,9 @@ _OVERRIDES = {
     ('trigger.wake_word', 'phrase'): 'Jarvis',
     ('stt', 'language'): 'es',
     ('autostart', 'enabled'): False,
+    # A Live desktop must not inherit standing approval for unattended tools.
+    # Existing profiles remain untouched; chat-specific policies are separate.
+    ('safety', 'approval_mode'): 'ask',
     # The upstream template is cloud-first (Gemini). A fresh MJON Live profile
     # must instead select the real local provider, without requiring API keys.
     # Ollama discovers existing local weights; this does not install or pull any.

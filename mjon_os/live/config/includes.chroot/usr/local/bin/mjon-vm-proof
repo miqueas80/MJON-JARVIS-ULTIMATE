@@ -37,6 +37,43 @@ else
   exit 1
 fi
 
+payload_failure() {
+  # Keep the actual failed user-service evidence. The earlier
+  # artifact showed only a payload marker, hiding the failure.
+  {
+    printf '\nMJON Ollama user-service diagnostics\n'
+    runuser -u user -- env XDG_RUNTIME_DIR="/run/user/$uid" \
+      DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" \
+      systemctl --user show mjon-ollama.service \
+      -p ActiveState -p SubState -p Result -p ExecMainCode \
+      -p ExecMainStatus -p ExecStartPre -p ExecStart -p TimeoutStartUSec
+    # Process entries and user-manager unit entries have different fields.
+    journalctl -b --no-pager -n 80 _SYSTEMD_USER_UNIT=mjon-ollama.service \
+      + "_UID=$uid" USER_UNIT=mjon-ollama.service
+    stat -c '%a %U:%G %n' /opt/mjon-ai-os/ollama \
+      /opt/mjon-ai-os/ollama/manifest.json \
+      /opt/mjon-ai-os/ollama/runtime/bin/ollama
+    grep -E 'MemTotal:|MemAvailable:' /proc/meminfo
+  } > /dev/ttyS0 2>&1 || true
+  emit OLLAMA_DIAGNOSTICS_DONE
+  exit 1
+}
+
+payload_ready() {
+  # A healthy JARVIS API can precede the independently supervised daemon.
+  # Wait for integrity verification/startup; do not label start-pre a failure.
+  deadline=$(( $(date +%s) + 610 ))
+  while [ "$(date +%s)" -lt "$deadline" ]; do
+    if curl -fsS --noproxy '*' --max-time 3 \
+        http://127.0.0.1:11434/api/tags 2>/dev/null | /opt/mjon-ai-os/venv/bin/python -c \
+        'import json,sys; expected=json.load(open("/opt/mjon-ai-os/ollama/manifest.json"))["model"]; assert any(m.get("name")==expected for m in json.load(sys.stdin)["models"])' 2>/dev/null; then
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
+}
+
 # SDDM autologin and KDE Plasma can take longer than the login greeter itself.
 # Confirm a real Plasma session process before claiming a working desktop.
 uid="$(id -u user)"
@@ -80,30 +117,22 @@ while [ "$i" -lt 120 ]; do
           emit JARVIS_API_READY
           if [ -f /opt/mjon-ai-os/ollama/manifest.json ]; then
             # This proves packaged runtime and model discovery, not inference.
-            if curl -fsS --noproxy '*' --max-time 5 \
-                http://127.0.0.1:11434/api/tags | /opt/mjon-ai-os/venv/bin/python -c \
-                'import json,sys; expected=json.load(open("/opt/mjon-ai-os/ollama/manifest.json"))["model"]; assert any(m.get("name")==expected for m in json.load(sys.stdin)["models"])'; then
+            if payload_ready; then
               emit OLLAMA_PAYLOAD_READY
+              # Exercise the installed production brain and actual Live config.
+              # No generated tool is executed; QEMU has no network or host disks.
+              if runuser -u user -- env MJON_NATIVE_OS=1 \
+                  JARVIS_DATA_DIR=/home/user/.local/share/mjon-ai-os \
+                  timeout 110 /opt/mjon-ai-os/venv/bin/python -m mjon_os.jarvis_probe \
+                  --config /home/user/.config/mjon-ai-os/dodaios.toml > /dev/ttyS0 2>&1; then
+                emit JARVIS_LOCAL_INFERENCE_READY
+              else
+                emit JARVIS_LOCAL_INFERENCE_FAILED
+                payload_failure
+              fi
             else
               emit OLLAMA_PAYLOAD_FAILED
-              # Keep the actual failed user-service evidence. The earlier
-              # artifact showed only a payload marker, hiding the failure.
-              {
-                printf '\nMJON Ollama user-service diagnostics\n'
-                runuser -u user -- env XDG_RUNTIME_DIR="/run/user/$uid" \
-                  DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" \
-                  systemctl --user show mjon-ollama.service \
-                  -p ActiveState -p SubState -p Result -p ExecMainCode \
-                  -p ExecMainStatus -p ExecStartPre -p ExecStart -p TimeoutStartUSec
-                journalctl -b --no-pager -n 80 "_UID=$uid" \
-                  _SYSTEMD_USER_UNIT=mjon-ollama.service
-                stat -c '%a %U:%G %n' /opt/mjon-ai-os/ollama \
-                  /opt/mjon-ai-os/ollama/manifest.json \
-                  /opt/mjon-ai-os/ollama/runtime/bin/ollama
-                grep -E 'MemTotal:|MemAvailable:' /proc/meminfo
-              } > /dev/ttyS0 2>&1 || true
-              emit OLLAMA_DIAGNOSTICS_DONE
-              exit 1
+              payload_failure
             fi
           fi
           exit 0

@@ -31,6 +31,7 @@ class BootEvidence:
     excerpt: str
     payload_required: bool = False
     payload: bool = False
+    inference: bool = False
 
 
 _KERNEL_RE = re.compile(r"(?:Linux version \d|Linux kernel|MJON_VM_PROOF KERNEL_RUNNING)")
@@ -51,12 +52,13 @@ def analyze_serial_log(log: str) -> BootEvidence:
         excerpt,
         payload_required='MJON_VM_PROOF OLLAMA_PAYLOAD_REQUIRED' in log,
         payload='MJON_VM_PROOF OLLAMA_PAYLOAD_READY' in log,
+        inference='MJON_VM_PROOF JARVIS_LOCAL_INFERENCE_READY' in log,
     )
 
 
 def qemu_command(
     iso: Path, *, firmware: Path | None, firmware_vars: Path | None = None,
-    memory_mib: int = 3072,
+    memory_mib: int = 4096,
 ) -> list[str]:
     if not iso.is_file():
         raise FileNotFoundError(iso)
@@ -141,7 +143,8 @@ def _collect_until_graphical_ready(process: subprocess.Popen, timeout_seconds: i
                     and b"MJON_VM_PROOF JARVIS_SERVICE_STABLE" in observed
                     and b"MJON_VM_PROOF JARVIS_API_READY" in observed
                     and (b"MJON_VM_PROOF OLLAMA_PAYLOAD_REQUIRED" not in observed
-                         or b"MJON_VM_PROOF OLLAMA_PAYLOAD_READY" in observed)):
+                         or (b"MJON_VM_PROOF OLLAMA_PAYLOAD_READY" in observed
+                             and b"MJON_VM_PROOF JARVIS_LOCAL_INFERENCE_READY" in observed))):
                 break
     finally:
         selector.close()
@@ -190,13 +193,13 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     evidence = boot_probe(args.iso, firmware=args.uefi_firmware, timeout_seconds=args.timeout)
     args.log.write_text(
-        f"MJON_VM_EVIDENCE kernel={evidence.kernel} userspace={evidence.userspace} live_user={evidence.live_user} plasma={evidence.plasma} jarvis={evidence.jarvis} api={evidence.api} payload_required={evidence.payload_required} payload={evidence.payload}\n"
+        f"MJON_VM_EVIDENCE kernel={evidence.kernel} userspace={evidence.userspace} live_user={evidence.live_user} plasma={evidence.plasma} jarvis={evidence.jarvis} api={evidence.api} payload_required={evidence.payload_required} payload={evidence.payload} inference={evidence.inference}\n"
         + evidence.excerpt + "\n", encoding="utf-8",
     )
     label = "UEFI" if args.uefi_firmware is not None else "BIOS"
-    print(f"{label} boot evidence: kernel={evidence.kernel}, userspace={evidence.userspace}, live_user={evidence.live_user}, plasma={evidence.plasma}, jarvis={evidence.jarvis}, api={evidence.api}, payload_required={evidence.payload_required}, payload={evidence.payload}")
+    print(f"{label} boot evidence: kernel={evidence.kernel}, userspace={evidence.userspace}, live_user={evidence.live_user}, plasma={evidence.plasma}, jarvis={evidence.jarvis}, api={evidence.api}, payload_required={evidence.payload_required}, payload={evidence.payload}, inference={evidence.inference}")
     if (not all((evidence.kernel, evidence.userspace, evidence.live_user, evidence.plasma, evidence.jarvis, evidence.api))
-            or (evidence.payload_required and not evidence.payload)):
+            or (evidence.payload_required and not (evidence.payload and evidence.inference))):
         print(evidence.excerpt, file=sys.stderr)
         return 1
     return 0

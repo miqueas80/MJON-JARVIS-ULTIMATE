@@ -22,8 +22,9 @@ USB login candidate.**
 The replacement build now explicitly includes `live-config`,
 `live-config-systemd`, `user-setup`, and `sudo`. Its QEMU boot gate refuses
 success unless the expected `user` exists, has its home directory and its
-password is not locked. It does **not** claim to simulate a full interactive
-keyboard password entry; physical testing is still necessary.
+password is not locked, then authenticates the known Live password through
+PAM. It does **not** claim to simulate an interactive keyboard login; physical
+testing is still necessary.
 
 Use only a subsequently verified source commit and checksum. Replacing the
 ISO on Ventoy does not format the internal Windows disk.

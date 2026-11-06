@@ -22,8 +22,9 @@ USB login candidate.**
 The replacement build now explicitly includes `live-config`,
 `live-config-systemd`, `user-setup`, and `sudo`. Its QEMU boot gate refuses
 success unless the expected `user` exists, has its home directory and its
-password is not locked. It does **not** claim to simulate a full interactive
-keyboard password entry; physical testing is still necessary.
+password is not locked, then authenticates the known Live password through
+PAM. It does **not** claim to simulate an interactive keyboard login; physical
+testing is still necessary.
 
 Use only a subsequently verified source commit and checksum. Replacing the
 ISO on Ventoy does not format the internal Windows disk.
@@ -73,4 +74,9 @@ journalctl --user -u mjon-jarvis.service -b --no-pager -n 100
 - Unapproved disk modifications or requests for elevated permissions: stop the experiment.
 - Hardware-specific changes remain out of scope until a VM and ISO build pass.
 
-**Current status:** candidate build automation and VM validation pending. **No release ISO is approved for USB testing yet.**
+**Recorded status:** the `70997acb` experimental build passed BIOS/UEFI VM
+boot, account, Plasma, user-service and HTTP API checks. It predates later
+provider defaults and contains no Ollama weights. See the
+[recovery results](../docs/MJON_RECOVERY_RESULTS_2026-11-05.md) for the corrected
+payload profile and its separate real inference evidence. Check the exact new
+build result and checksum before any hardware trial; no final ISO is approved.

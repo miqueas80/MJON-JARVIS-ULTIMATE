@@ -15,9 +15,10 @@ Esta edición agrega la base del **Centro de mando unificado** de MJON AI OS:
   reales y distinguiendo ejecutables de pesos de modelos.
 - Política de uso conservador en computadoras de 8 GiB: los entornos avanzados
   de entrenamiento/servidores GPU se mantienen opcionales y apagados.
-- Un adaptador de prueba para Ollama local en `127.0.0.1:11434`. **No se incluye
-  Ollama ni ningún modelo descargado**: si no existen, se indica que no hay
-  motor local disponible en vez de generar respuestas falsas.
+- The base profile includes the loopback adapter without model weights. The
+  recovery profile explicitly bundles Ollama 0.40.14 CPU and Qwen3 1.7B with
+  licenses and hashes; consult `mjon-build.json` for the exact artifact.
+  Discovery, actual generation and desktop interaction are separate checks.
 - Memoria comprimida zram y paquetes de seguridad base; todavía faltan perfiles
   de aislamiento de agentes auditados y persistencia USB.
 - La conexión del nuevo plano de control con todas las conversaciones y
@@ -46,7 +47,9 @@ se inicie la ISO nueva en el equipo.
 - Corrección del usuario `user` de Debian Live y comprobación real de su contraseña mediante PAM.
 - Inicio automático de una sola sesión KDE Plasma para evitar solicitar credenciales cada vez que arranca el pendrive.
 - Puerta de publicación más estricta: el mismo USB debe iniciar Linux, autenticar al usuario Live, abrir Plasma, mantener el servicio JARVIS activo y responder en `http://127.0.0.1:47821/api/health` en máquinas virtuales BIOS y UEFI.
-- Conservación del entorno Live sin instalador, manteniendo intactas las particiones de Windows durante el arranque normal.
+- Live mode has no installer or automatic partitioning. Applications retain
+  the Live user's filesystem permissions; internal-disk write isolation is not
+  guaranteed. Never open or modify the Windows partitions during testing.
 
 **No se garantiza que toda aplicación, micrófono, aceleración gráfica o modelo de IA funcione en todos los equipos.** El objetivo de esta entrega es validar el sistema operativo y la integración nativa en hardware real. Algunas funciones avanzadas de IA y voz siguen sujetas a configuración y modelos instalados.
 
@@ -106,3 +109,19 @@ Ollama binary, download weights, or start a remote provider. Read
 mjon_os/PROVIDER_DIAGNOSTICS.md in the repository for setup and verification.
 The new fixes apply only to ISO images built from a commit containing them;
 existing downloadable ISO files are unchanged.
+
+## Recovery candidate status
+
+No final ISO is approved. Source `0f7ab29` failed bundled daemon discovery in
+the BIOS guest after reaching KDE and JARVIS HTTP; UEFI was not attempted.
+The diagnostic 7e8da8d guest showed Ollama still initializing its verified
+model store when discovery was checked. The corrected bounded startup wait
+requires a new VM result. The recovery gates now require actual configured JARVIS-brain generation for
+images that declare a bundled payload, in addition to discovery. A quarantined
+UNVERIFIED artifact is diagnostic input and must not be presented as a USB
+candidate. Fresh native profiles use Ask for the global tool-approval policy;
+existing and chat-specific policies remain separate.
+
+See `docs/MJON_BOOT_RECOVERY_2026-11-06.md` and the exact Actions result before
+selecting a new image. Offline speech, vision, full agent execution, persistent
+USB memory and physical Intel 8 GiB performance remain unverified.

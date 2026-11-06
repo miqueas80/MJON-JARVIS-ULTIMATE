@@ -3,6 +3,11 @@
 # No root shell, no background downloads. GTK is started only on user request.
 set -eu
 engine=/opt/mjon-ai-os/venv/bin/python
+# Match the session's explicit bundled runtime discovery. Presence still does
+# not prove generation; the Center's provider test remains an actual HTTP call.
+if [ -x /opt/mjon-ai-os/ollama/runtime/bin/ollama ]; then
+  export PATH="/opt/mjon-ai-os/ollama/runtime/bin:$PATH"
+fi
 if [ -x "$engine" ]; then
   # The graphical hub can fail on hardware without GTK/WebKit support.
   # Never strand the user: retain KDE Settings as a real recovery fallback.

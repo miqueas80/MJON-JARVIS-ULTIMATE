@@ -1,0 +1,111 @@
+{
+  "reply": "El laboratorio conserva sus documentos en la computadora y trabaja sin conexi\u00f3n.",
+  "latency_s": 13.146,
+  "active_provider": "ollama",
+  "failed_providers": {},
+  "http_chat_requests": 1,
+  "system_prompt_characters": 4932,
+  "tools_registered": 0,
+  "resident_models": [
+    {
+      "name": "qwen3-1.7b-jarvis-8d6b982f:latest",
+      "model": "qwen3-1.7b-jarvis-8d6b982f:latest",
+      "size": 1649651219,
+      "digest": "112bd07ba7447e20240afa82ac2bb01525f58a4c794a17eba9a4d82b6d53ca04",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen3",
+        "families": [
+          "qwen3"
+        ],
+        "parameter_size": "2.0B",
+        "quantization_level": "Q4_K_M"
+      },
+      "expires_at": "2026-11-06T12:42:46.402477739Z",
+      "size_vram": 0,
+      "context_length": 2048,
+      "runner": "llamacpp"
+    }
+  ],
+  "ollama_version": "0.40.14",
+  "kind": "real-manager-text-only-no-tools",
+  "interfaces": [
+    "lo"
+  ],
+  "external_connect_failure": "[Errno 101] Network is unreachable",
+  "gui_test": false,
+  "physical_hardware_test": false,
+  "model_inventory": [
+    {
+      "name": "qwen3-1.7b-jarvis-8d6b982f:latest",
+      "model": "qwen3-1.7b-jarvis-8d6b982f:latest",
+      "modified_at": "2026-11-06T12:35:57.080504273Z",
+      "size": 1359293102,
+      "digest": "112bd07ba7447e20240afa82ac2bb01525f58a4c794a17eba9a4d82b6d53ca04",
+      "details": {
+        "parent_model": "qwen3:1.7b",
+        "format": "gguf",
+        "family": "qwen3",
+        "families": [
+          "qwen3"
+        ],
+        "parameter_size": "2.0B",
+        "quantization_level": "Q4_K_M",
+        "context_length": 40960,
+        "embedding_length": 2048,
+        "runner": "llamacpp"
+      },
+      "capabilities": [
+        "completion",
+        "tools",
+        "thinking"
+      ]
+    },
+    {
+      "name": "qwen3:1.7b",
+      "model": "qwen3:1.7b",
+      "modified_at": "2026-11-06T12:35:28.004483739Z",
+      "size": 1359293444,
+      "digest": "8f68893c685c3ddff2aa3fffce2aa60a30bb2da65ca488b61fff134a4d1730e7",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen3",
+        "families": [
+          "qwen3"
+        ],
+        "parameter_size": "2.0B",
+        "quantization_level": "Q4_K_M",
+        "context_length": 40960,
+        "embedding_length": 2048,
+        "runner": "ggml"
+      },
+      "capabilities": [
+        "completion",
+        "tools",
+        "thinking"
+      ]
+    }
+  ],
+  "binary_sha256": "4a525117528467da41be4188ef8efbc3dbbca9da420fb25cd61cf49d104732fd",
+  "prompt_tokens": [
+    1124
+  ],
+  "context_slots": [
+    2048,
+    2048
+  ],
+  "runner_reported_untruncated": true,
+  "runner_reported_truncation": false,
+  "source_commit": "8f156309daaf00263025569e7632e81a513e577e",
+  "source_worktree_dirty": true,
+  "source_file_sha256": {
+    "scripts/mjon_manager_acceptance.py": "9b2090203e085fd7a0bd32f89f121a13cb4bb6f0ece21eba5a8523a0297cfdc2",
+    "dodaios/brain/manager.py": "6490b0eeac0fe927e6209f15f5a0c80722e493362f74954ded9cbc0680bb3435",
+    "dodaios/plugins/brain/ollama.py": "e385af0cd5d6f12abcfe1e14bc7ed5e7f583548c4234647e9c6b80aacf88268f",
+    "mjon_os/first_boot.py": "9cb8d9a1b38a105acfcde5d06ceb7b11927778be581b0baffc8cdb009eb45af1",
+    "mjon_os/ollama_policy.py": "b6252a43ea37ef93710db6defa39f21c180cbce655be6f51defecdab1fdef02f"
+  },
+  "passed": true
+}

@@ -14,6 +14,7 @@ import time
 from typing import Any, Callable
 
 from .local_inference import InferenceUnavailable, OllamaClient, is_cloud_model
+from .ollama_policy import eligible_models
 
 
 @dataclass(frozen=True)
@@ -41,8 +42,7 @@ def _choose_model(client: OllamaClient, requested: str | None) -> str:
     if requested is not None and requested not in models:
         raise InferenceUnavailable("El modelo configurado no está descargado en Ollama.")
     budget = int(client._ram_bytes * 0.4) if client._ram_bytes else None
-    eligible = [name for name, size in available
-                if budget is None or (size is not None and size <= budget)]
+    eligible = eligible_models(available, client._ram_bytes)
     if requested is not None:
         if requested not in eligible:
             if budget is not None and models[requested] is None:
@@ -92,7 +92,7 @@ def preload(client: OllamaClient, *, model: str | None = None,
     result = client._request("/api/generate", body={
         "model": chosen, "prompt": "", "stream": False,
         "keep_alive": keep_alive,
-        "options": {"num_ctx": 1024},
+        "options": {"num_ctx": 2048, "num_thread": 4},
     }, timeout=90)
     if result.get("done") is not True:
         raise InferenceUnavailable("Ollama returned an incomplete preload response.")
@@ -109,8 +109,9 @@ def preload_from_config(
 ) -> ProviderStatus:
     """Opt-in startup waits a bounded time for an already-managed local server.
 
-    The user service never starts Ollama or downloads any model. Waiting for
-    loopback readiness handles races with a separate system-level daemon.
+    This function never starts Ollama or downloads models. The optional OS
+    unit orders a bundled daemon dependency; without a payload, readiness
+    retries handle a separately managed system-level daemon.
     """
     if not config_file.exists():
         return ProviderStatus("disabled", detail="No hay configuración de precarga.")

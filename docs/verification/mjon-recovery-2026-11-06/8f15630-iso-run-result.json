@@ -1,0 +1,28 @@
+{
+  "run_id": 42217951377,
+  "source_commit": "8f156309daaf00263025569e7632e81a513e577e",
+  "result": "failure",
+  "bios": {
+    "kernel": true,
+    "live_user": true,
+    "plasma": true,
+    "jarvis_http": true,
+    "payload_discovery": true,
+    "actual_brain_generation": false
+  },
+  "uefi_attempted": false,
+  "integrity_start": "2026-11-06T13:03:40Z",
+  "integrity_stop": "2026-11-06T13:09:51Z",
+  "integrity_duration_seconds": 371,
+  "profile_create_http_status": 500,
+  "foreign_ownership_reproduction_run": 42226964724,
+  "reproduced_error": "chtimes referenced model weight: operation not permitted",
+  "graphical_error": "invalid opcode in libshiboken6.abi3.so.6.12",
+  "verified_artifact_uploaded": false,
+  "release_published": false,
+  "diagnostic_artifact": {
+    "id": 13504402883,
+    "zip_sha256": "bd784a303824ba4703cba617b9556481bbe5c3aa1efff1b824bf9e8604f3250d"
+  },
+  "scope": "Real isolated BIOS VM plus exact-payload native ownership reproduction. No physical hardware test. Original guest profile error detail was masked; the exact artifact reproduced the timestamp failure under another UID."
+}

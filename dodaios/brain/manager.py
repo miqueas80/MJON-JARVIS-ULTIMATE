@@ -10248,6 +10248,13 @@ class BrainManager:
         # make the loop wrongly fall through). Set below only when we prepend an
         # intelligent-router lead.
         self._router_lead_key: tuple[str, str | None] | None = None
+        from mjon_os.ollama_policy import native_mode
+        if native_mode() and self._config.brain.primary == "ollama":
+            if active != "ollama":
+                raise RuntimeError("Native local profile has a mismatched active brain; restart JARVIS.")
+            fast, deep = self._fast_model(active), self._deep_model(active)
+            model = (deep or fast) if level in ("deep", "code") else (fast or deep)
+            return [(active, model or None)]
         tool_lead: tuple[str, str | None] | None = None
 
         override = _TURN_OVERRIDE.get()

@@ -1,0 +1,264 @@
+test_actual_manager_chain_cannot_fall_through_to_cloud (test_ollama_recovery.ActualBrainPolicyTests.test_actual_manager_chain_cannot_fall_through_to_cloud) ... Executing <Task finished name='Task-2' coro=<ActualBrainPolicyTests.test_actual_manager_chain_cannot_fall_through_to_cloud() done, defined at /tmp/mjon-recovery-baseline/mjon_os/tests/test_ollama_recovery.py:173> exception=AssertionError("Lists differ: [('gemini', 'small'), ('ollama', 'small')] != [('ollama', 'small')]\n\nFirst differing element 0:\n('gemini', 'small')\n('ollama', 'small')\n\nFirst list contains 1 additional elements.\nFirst extra element 1:\n('ollama', 'small')\n\n- [('gemini', 'small'), ('ollama', 'small')]\n+ [('ollama', 'small')]") created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.251 seconds
+FAIL
+test_discovery_uses_no_environment_proxy_or_redirect (test_ollama_recovery.ActualBrainPolicyTests.test_discovery_uses_no_environment_proxy_or_redirect) ... FAIL
+test_first_boot_sets_actual_typed_fallback_and_output_budget (test_ollama_recovery.ActualBrainPolicyTests.test_first_boot_sets_actual_typed_fallback_and_output_budget) ... FAIL
+test_native_background_resolver_cannot_append_keyed_cloud_families (test_ollama_recovery.ActualBrainPolicyTests.test_native_background_resolver_cannot_append_keyed_cloud_families) ... Executing <Task finished name='Task-17' coro=<ActualBrainPolicyTests.test_native_background_resolver_cannot_append_keyed_cloud_families() done, defined at /tmp/mjon-recovery-baseline/mjon_os/tests/test_ollama_recovery.py:167> exception=AssertionError("Lists differ: [('ollama', None), ('codex', None), ('local-openai', None)] != [('ollama', None)]\n\nFirst list contains 2 additional elements.\nFirst extra element 1:\n('codex', None)\n\n- [('ollama', None), ('codex', None), ('local-openai', None)]\n+ [('ollama', None)]") created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.317 seconds
+FAIL
+test_native_boot_cannot_bypass_opt_in_preload_service (test_ollama_recovery.ActualBrainPolicyTests.test_native_boot_cannot_bypass_opt_in_preload_service) ... FAIL
+test_native_refuses_excessive_context_without_truncation (test_ollama_recovery.ActualBrainPolicyTests.test_native_refuses_excessive_context_without_truncation) ... FAIL
+test_native_rejects_configured_remote_endpoint_before_sdk (test_ollama_recovery.ActualBrainPolicyTests.test_native_rejects_configured_remote_endpoint_before_sdk) ... FAIL
+test_native_rejects_explicit_cloud_model (test_ollama_recovery.ActualBrainPolicyTests.test_native_rejects_explicit_cloud_model) ... FAIL
+test_native_rejects_pinned_unknown_or_oversized_weights (test_ollama_recovery.ActualBrainPolicyTests.test_native_rejects_pinned_unknown_or_oversized_weights) ... FAIL
+test_native_rejects_remote_metadata (test_ollama_recovery.ActualBrainPolicyTests.test_native_rejects_remote_metadata) ... FAIL
+test_sdk_uses_no_environment_proxy (test_ollama_recovery.ActualBrainPolicyTests.test_sdk_uses_no_environment_proxy) ... Executing <Task finished name='Task-52' coro=<ActualBrainPolicyTests.test_sdk_uses_no_environment_proxy() done, defined at /tmp/mjon-recovery-baseline/mjon_os/tests/test_ollama_recovery.py:118> exception=AssertionError("'http_client' not found in {'api_key': 'ollama', 'base_url': 'http://127.0.0.1:11434/v1', 'timeout': Timeout(connect=2.0, read=120.0, write=30.0, pool=30.0), 'max_retries': 0}") created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.618 seconds
+FAIL
+test_upstream_mode_preserves_user_lan_and_model (test_ollama_recovery.ActualBrainPolicyTests.test_upstream_mode_preserves_user_lan_and_model) ... ok
+test_cloud_alias_with_latest_tag_is_still_remote (test_ollama_recovery.AdapterRecoveryTests.test_cloud_alias_with_latest_tag_is_still_remote) ... FAIL
+test_partial_nonstream_response_cannot_be_ready (test_ollama_recovery.AdapterRecoveryTests.test_partial_nonstream_response_cannot_be_ready) ... FAIL
+test_remote_metadata_cannot_be_treated_as_downloaded_weights (test_ollama_recovery.AdapterRecoveryTests.test_remote_metadata_cannot_be_treated_as_downloaded_weights) ... FAIL
+test_unknown_size_cannot_generate_on_eight_gib (test_ollama_recovery.AdapterRecoveryTests.test_unknown_size_cannot_generate_on_eight_gib) ... FAIL
+
+======================================================================
+FAIL: test_actual_manager_chain_cannot_fall_through_to_cloud (test_ollama_recovery.ActualBrainPolicyTests.test_actual_manager_chain_cannot_fall_through_to_cloud)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/tmp/mjon-recovery-baseline/mjon_os/tests/test_ollama_recovery.py", line 185, in test_actual_manager_chain_cannot_fall_through_to_cloud
+    self.assertEqual(manager._build_fallback_chain("deep"), [("ollama", "small")])
+AssertionError: Lists differ: [('gemini', 'small'), ('ollama', 'small')] != [('ollama', 'small')]
+
+First differing element 0:
+('gemini', 'small')
+('ollama', 'small')
+
+First list contains 1 additional elements.
+First extra element 1:
+('ollama', 'small')
+
+- [('gemini', 'small'), ('ollama', 'small')]
++ [('ollama', 'small')]
+
+======================================================================
+FAIL: test_discovery_uses_no_environment_proxy_or_redirect (test_ollama_recovery.ActualBrainPolicyTests.test_discovery_uses_no_environment_proxy_or_redirect)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/tmp/mjon-recovery-baseline/mjon_os/tests/test_ollama_recovery.py", line 115, in test_discovery_uses_no_environment_proxy_or_redirect
+    self.assertIs(options.get("trust_env"), False)
+AssertionError: None is not False
+
+======================================================================
+FAIL: test_first_boot_sets_actual_typed_fallback_and_output_budget (test_ollama_recovery.ActualBrainPolicyTests.test_first_boot_sets_actual_typed_fallback_and_output_budget)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/tmp/mjon-recovery-baseline/mjon_os/tests/test_ollama_recovery.py", line 162, in test_first_boot_sets_actual_typed_fallback_and_output_budget
+    self.assertEqual(config.brain.local_fallback, "ollama")
+AssertionError: 'claude-api' != 'ollama'
+- claude-api
++ ollama
+
+
+======================================================================
+FAIL: test_native_background_resolver_cannot_append_keyed_cloud_families (test_ollama_recovery.ActualBrainPolicyTests.test_native_background_resolver_cannot_append_keyed_cloud_families)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/tmp/mjon-recovery-baseline/mjon_os/tests/test_ollama_recovery.py", line 171, in test_native_background_resolver_cannot_append_keyed_cloud_families
+    self.assertEqual(_resolve_chain(config), [("ollama", None)])
+AssertionError: Lists differ: [('ollama', None), ('codex', None), ('local-openai', None)] != [('ollama', None)]
+
+First list contains 2 additional elements.
+First extra element 1:
+('codex', None)
+
+- [('ollama', None), ('codex', None), ('local-openai', None)]
++ [('ollama', None)]
+
+======================================================================
+FAIL: test_native_boot_cannot_bypass_opt_in_preload_service (test_ollama_recovery.ActualBrainPolicyTests.test_native_boot_cannot_bypass_opt_in_preload_service)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/tmp/mjon-recovery-baseline/mjon_os/tests/test_ollama_recovery.py", line 147, in test_native_boot_cannot_bypass_opt_in_preload_service
+    self.assertFalse(should_autostart(config)[0])
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_native_refuses_excessive_context_without_truncation (test_ollama_recovery.ActualBrainPolicyTests.test_native_refuses_excessive_context_without_truncation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/mjon-recovery-baseline/dodaios/plugins/brain/ollama.py", line 835, in _prepare_call
+    run_model = await ensure_profile(
+                ^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/mjon-recovery-baseline/dodaios/brain/ollama_profiles.py", line 153, in ensure_profile
+    async with httpx.AsyncClient(timeout=_TIMEOUT, transport=transport, headers=headers) as client:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/unittest/mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/unittest/mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/unittest/mock.py", line 1204, in _execute_mock_call
+    result = effect(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/mjon-recovery-baseline/mjon_os/tests/test_ollama_recovery.py", line 78, in client
+    return real_client(transport=httpx.MockTransport(handler), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: httpx.AsyncClient() got multiple values for keyword argument 'transport'
+
+The above exception was the direct cause of the following exception:
+
+RuntimeError: Could not prepare the selected local model context.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/tmp/mjon-recovery-baseline/mjon_os/tests/test_ollama_recovery.py", line 134, in test_native_refuses_excessive_context_without_truncation
+    with self.assertRaisesRegex(RuntimeError, "native desktop context limit"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "native desktop context limit" does not match "Could not prepare the selected local model context."
+
+======================================================================
+FAIL: test_native_rejects_configured_remote_endpoint_before_sdk (test_ollama_recovery.ActualBrainPolicyTests.test_native_rejects_configured_remote_endpoint_before_sdk)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/tmp/mjon-recovery-baseline/mjon_os/tests/test_ollama_recovery.py", line 92, in test_native_rejects_configured_remote_endpoint_before_sdk
+    with self.assertRaises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_native_rejects_explicit_cloud_model (test_ollama_recovery.ActualBrainPolicyTests.test_native_rejects_explicit_cloud_model)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/tmp/mjon-recovery-baseline/mjon_os/tests/test_ollama_recovery.py", line 97, in test_native_rejects_explicit_cloud_model
+    with self.assertRaises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: RuntimeError not raised
+
+======================================================================
+FAIL: test_native_rejects_pinned_unknown_or_oversized_weights (test_ollama_recovery.ActualBrainPolicyTests.test_native_rejects_pinned_unknown_or_oversized_weights)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/tmp/mjon-recovery-baseline/mjon_os/tests/test_ollama_recovery.py", line 108, in test_native_rejects_pinned_unknown_or_oversized_weights
+    with self.assertRaises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: RuntimeError not raised
+
+======================================================================
+FAIL: test_native_rejects_remote_metadata (test_ollama_recovery.ActualBrainPolicyTests.test_native_rejects_remote_metadata)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/tmp/mjon-recovery-baseline/mjon_os/tests/test_ollama_recovery.py", line 102, in test_native_rejects_remote_metadata
+    with self.assertRaises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: RuntimeError not raised
+
+======================================================================
+FAIL: test_sdk_uses_no_environment_proxy (test_ollama_recovery.ActualBrainPolicyTests.test_sdk_uses_no_environment_proxy)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/tmp/mjon-recovery-baseline/mjon_os/tests/test_ollama_recovery.py", line 126, in test_sdk_uses_no_environment_proxy
+    self.assertIn("http_client", captured)
+AssertionError: 'http_client' not found in {'api_key': 'ollama', 'base_url': 'http://127.0.0.1:11434/v1', 'timeout': Timeout(connect=2.0, read=120.0, write=30.0, pool=30.0), 'max_retries': 0}
+
+======================================================================
+FAIL: test_cloud_alias_with_latest_tag_is_still_remote (test_ollama_recovery.AdapterRecoveryTests.test_cloud_alias_with_latest_tag_is_still_remote)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/mjon-recovery-baseline/mjon_os/tests/test_ollama_recovery.py", line 48, in test_cloud_alias_with_latest_tag_is_still_remote
+    self.assertTrue(is_cloud_model("remote-cloud:latest"))
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_partial_nonstream_response_cannot_be_ready (test_ollama_recovery.AdapterRecoveryTests.test_partial_nonstream_response_cannot_be_ready)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/mjon-recovery-baseline/mjon_os/tests/test_ollama_recovery.py", line 43, in test_partial_nonstream_response_cannot_be_ready
+    with self.assertRaises(InferenceUnavailable):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: InferenceUnavailable not raised
+
+======================================================================
+FAIL: test_remote_metadata_cannot_be_treated_as_downloaded_weights (test_ollama_recovery.AdapterRecoveryTests.test_remote_metadata_cannot_be_treated_as_downloaded_weights)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/mjon-recovery-baseline/mjon_os/tests/test_ollama_recovery.py", line 58, in test_remote_metadata_cannot_be_treated_as_downloaded_weights
+    self.assertEqual(len(calls), 1)
+AssertionError: 2 != 1
+
+======================================================================
+FAIL: test_unknown_size_cannot_generate_on_eight_gib (test_ollama_recovery.AdapterRecoveryTests.test_unknown_size_cannot_generate_on_eight_gib)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/mjon-recovery-baseline/mjon_os/tests/test_ollama_recovery.py", line 36, in test_unknown_size_cannot_generate_on_eight_gib
+    self.assertEqual(len(calls), 1)
+AssertionError: 2 != 1
+
+----------------------------------------------------------------------
+Ran 16 tests in 1.929s
+
+FAILED (failures=15)

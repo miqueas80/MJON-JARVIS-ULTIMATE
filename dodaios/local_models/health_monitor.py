@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import datetime as _dt
 import json
+import hashlib
 import logging
 import os
 import uuid
@@ -53,7 +54,7 @@ MIN_INTERVAL_S = 60.0
 
 HEALTH_FILE_NAME = "local_models_health.json"
 # Old healthy records could mean an HTTP-only check without generation.
-_HEALTH_EVIDENCE_VERSION = 2
+_HEALTH_EVIDENCE_VERSION = 3
 
 ProbeFn = Callable[[str], Awaitable[dict[str, Any]]]
 GenerateFn = Callable[[Any, str], Awaitable[Any]]
@@ -129,9 +130,13 @@ def load_last_report() -> dict[str, Any] | None:
     return payload
 
 
-def read_health_record() -> dict[str, Any]:
+def read_health_record(cfg: Any = None) -> dict[str, Any]:
     """The badge record: ``{status, reason, since, last_ok, checked_at}`` (file only)."""
     payload = load_last_report() or {}
+    if payload.get("status") == "ok" and (not payload.get("evidence_context")
+                                          or payload.get("evidence_context") != _evidence_context(cfg)):
+        payload = {**payload, "status": "unknown", "last_ok": None,
+                   "reason": "Provider configuration changed; a fresh generation check is required."}
     return {
         "status": str(payload.get("status") or "unknown"),
         "reason": str(payload.get("reason") or ""),
@@ -176,7 +181,28 @@ def _without_retired_roles(payload: dict[str, Any]) -> dict[str, Any]:
     return pruned
 
 
-def write_health_record(status: str, reason: str, *, checked_at: str | None = None) -> bool:
+def _evidence_context(cfg: Any = None, *, root: str | None = None) -> str | None:
+    """Bind historical generation proof to the endpoint, roles and active brain."""
+    try:
+        if cfg is None:
+            from dodaios.core.config import load_config
+            cfg = load_config()
+        context = {"root": root or _server_root(cfg), "roles": _configured_roles(cfg),
+                   "primary": getattr(getattr(cfg, "brain", None), "primary", "")}
+        return hashlib.sha256(json.dumps(context, sort_keys=True).encode()).hexdigest()
+    except Exception:
+        log.debug("local-models: evidence context unavailable", exc_info=True)
+        return None
+
+
+def generation_evidence(cfg: Any, *, root: str | None = None) -> dict[str, Any]:
+    """Stamp every successful generation writer with the same evidence schema."""
+    return {"health_evidence_version": _HEALTH_EVIDENCE_VERSION,
+            "evidence_context": _evidence_context(cfg, root=root)}
+
+
+def write_health_record(status: str, reason: str, *, checked_at: str | None = None,
+                        evidence_context: str | None = None) -> bool:
     """Merge the badge keys into the health file; ``since`` holds while the status does."""
     stamp = checked_at or _dt.datetime.now(_dt.UTC).isoformat(timespec="seconds")
     previous = load_last_report() or {}
@@ -184,6 +210,7 @@ def write_health_record(status: str, reason: str, *, checked_at: str | None = No
     payload["status"] = status
     payload["reason"] = reason
     payload["health_evidence_version"] = _HEALTH_EVIDENCE_VERSION
+    payload["evidence_context"] = evidence_context or _evidence_context()
     payload["checked_at"] = stamp
     payload["since"] = (
         previous.get("since")
@@ -313,7 +340,7 @@ async def check_once(
                     status, reason = "error", f"{model}: {detail}"
     record = {"status": status, "reason": reason}
     if persist:
-        write_health_record(status, reason)
+        write_health_record(status, reason, evidence_context=_evidence_context(cfg, root=root))
     return record
 
 
@@ -564,7 +591,7 @@ async def verify_setup(
     else:
         status, reason = "ok", ""
     if persist:
-        write_health_record(status, reason)
+        write_health_record(status, reason, evidence_context=_evidence_context(cfg, root=root))
     return {"ok": status == "ok", "status": status, "reason": reason, "steps": steps}
 
 

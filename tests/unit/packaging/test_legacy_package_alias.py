@@ -87,4 +87,13 @@ def test_the_repository_tracks_no_path_with_the_earlier_name() -> None:
         pytest.skip("not a git checkout")
     paths = [name for name in listing.decode("utf-8", "replace").split("\0") if name]
     assert paths
-    assert [name for name in paths if "jarvis" in name.lower()] == []
+    native_identity_paths = {
+        ".github/workflows/mjon-jarvis-smoke.yml",
+        "mjon_os/jarvis_probe.py",
+        "mjon_os/live/config/includes.chroot/usr/lib/systemd/user/mjon-jarvis.service",
+    }
+    # MJON's native assistant namespace is an explicit product identity, not
+    # a reintroduced top-level legacy import package. Keep the original ban
+    # on every other legacy-named path.
+    assert [name for name in paths if "jarvis" in name.lower()
+            and not name.startswith("mjon_jarvis/") and name not in native_identity_paths] == []

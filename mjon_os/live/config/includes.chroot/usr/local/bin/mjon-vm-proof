@@ -3,6 +3,9 @@
 set -eu
 [ -c /dev/ttyS0 ] || exit 0
 emit() { printf 'MJON_VM_PROOF %s\n' "$1" > /dev/ttyS0; }
+if [ -f /opt/mjon-ai-os/ollama/manifest.json ]; then
+  emit OLLAMA_PAYLOAD_REQUIRED
+fi
 emit KERNEL_RUNNING
 if systemctl is-active --quiet display-manager.service; then
   emit DISPLAY_MANAGER_ACTIVE
@@ -34,6 +37,46 @@ else
   exit 1
 fi
 
+payload_failure() {
+  # Keep the actual failed user-service evidence. The earlier
+  # artifact showed only a payload marker, hiding the failure.
+  {
+    printf '\nMJON Ollama user-service diagnostics\n'
+    for unit in mjon-ollama.service mjon-jarvis.service; do
+      printf '\nMJON unit: %s\n' "$unit"
+      runuser -u user -- env XDG_RUNTIME_DIR="/run/user/$uid" \
+        DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" \
+        systemctl --user show "$unit" \
+        -p ActiveState -p SubState -p Result -p MainPID -p ExecMainCode \
+        -p ExecMainStatus -p ExecStartPre -p ExecStart -p TimeoutStartUSec
+      # Process entries and user-manager unit entries have different fields.
+      journalctl -b --no-pager -n 80 "_SYSTEMD_USER_UNIT=$unit" \
+        + "_UID=$uid" "USER_UNIT=$unit"
+    done
+    stat -c '%a %U:%G %n' /opt/mjon-ai-os/ollama \
+      /opt/mjon-ai-os/ollama/manifest.json \
+      /opt/mjon-ai-os/ollama/runtime/bin/ollama
+    grep -E 'MemTotal:|MemAvailable:' /proc/meminfo
+  } > /dev/ttyS0 2>&1 || true
+  emit OLLAMA_DIAGNOSTICS_DONE
+  exit 1
+}
+
+payload_ready() {
+  # A healthy JARVIS API can precede the independently supervised daemon.
+  # Wait for integrity verification/startup; do not label start-pre a failure.
+  deadline=$(( $(date +%s) + 610 ))
+  while [ "$(date +%s)" -lt "$deadline" ]; do
+    if curl -fsS --noproxy '*' --max-time 3 \
+        http://127.0.0.1:11434/api/tags 2>/dev/null | /opt/mjon-ai-os/venv/bin/python -c \
+        'import json,sys; expected=json.load(open("/opt/mjon-ai-os/ollama/manifest.json"))["model"]; assert any(m.get("name")==expected for m in json.load(sys.stdin)["models"])' 2>/dev/null; then
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
+}
+
 # SDDM autologin and KDE Plasma can take longer than the login greeter itself.
 # Confirm a real Plasma session process before claiming a working desktop.
 uid="$(id -u user)"
@@ -53,6 +96,11 @@ fi
 
 # The OS-owned JARVIS process must remain alive after KDE has started.
 # Query only the logged-in user's user service; do not grant root to JARVIS.
+jarvis_main_pid() {
+  runuser -u user -- env XDG_RUNTIME_DIR="/run/user/$uid" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" \
+    systemctl --user show mjon-jarvis.service -p MainPID --value
+}
 service_active() {
   [ -S "/run/user/$uid/bus" ] || return 1
   runuser -u user -- env \
@@ -66,6 +114,7 @@ while [ "$i" -lt 120 ]; do
   if service_active; then
     sleep 5
     if service_active; then
+      initial_jarvis_pid="$(jarvis_main_pid)"
       emit JARVIS_SERVICE_STABLE
       # A running Python process alone is not an operational assistant.
       # The native desktop must also respond on its loopback health endpoint.
@@ -75,6 +124,32 @@ while [ "$i" -lt 120 ]; do
         if curl -fsS --noproxy '*' --max-time 2 \
             http://127.0.0.1:47821/api/health >/dev/null 2>&1; then
           emit JARVIS_API_READY
+          if [ -f /opt/mjon-ai-os/ollama/manifest.json ]; then
+            # This proves packaged runtime and model discovery, not inference.
+            if payload_ready; then
+              emit OLLAMA_PAYLOAD_READY
+              # Exercise the installed production brain and actual Live config.
+              # No generated tool is executed; QEMU has no network or host disks.
+              if runuser -u user -- env MJON_NATIVE_OS=1 \
+                  JARVIS_DATA_DIR=/home/user/.local/share/mjon-ai-os \
+                  timeout 110 /opt/mjon-ai-os/venv/bin/python -m mjon_os.jarvis_probe \
+                  --config /home/user/.config/mjon-ai-os/dodaios.toml > /dev/ttyS0 2>&1; then
+                if service_active && [ "$(jarvis_main_pid)" = "$initial_jarvis_pid" ] && \
+                    curl -fsS --noproxy '*' --max-time 3 http://127.0.0.1:47821/api/health >/dev/null; then
+                  emit JARVIS_LOCAL_INFERENCE_READY
+                else
+                  emit JARVIS_SESSION_CHANGED_DURING_INFERENCE
+                  payload_failure
+                fi
+              else
+                emit JARVIS_LOCAL_INFERENCE_FAILED
+                payload_failure
+              fi
+            else
+              emit OLLAMA_PAYLOAD_FAILED
+              payload_failure
+            fi
+          fi
           exit 0
         fi
         j=$((j+1))

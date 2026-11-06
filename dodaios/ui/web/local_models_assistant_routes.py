@@ -191,12 +191,12 @@ async def get_benchmarks(provider_id: str, request: Request, refresh: bool = Fal
 
 
 @router.get("/health", response_model=HealthResponse)
-async def get_health(provider_id: str) -> HealthResponse:
+async def get_health(provider_id: str, request: Request) -> HealthResponse:
     """The persisted badge record — a file read, no live call."""
     from dodaios.local_models.health_monitor import read_health_record
 
     _require_pull_capable(provider_id)
-    return HealthResponse(**read_health_record())
+    return HealthResponse(**read_health_record(_resolve_cfg(request)))
 
 
 __all__ = ["router"]

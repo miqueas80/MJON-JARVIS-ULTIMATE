@@ -194,6 +194,10 @@ def plan_capability(
         key=lambda m: (m.workstation_only, m.engine_priority, m.title),
     )
     for module in candidates:
+        # A bare tensor runtime does not expose a chat server or an adapter.
+        # Keep it visible in the catalog without selecting it as inference.
+        if capability == "inference" and module.distribution and not module.executable:
+            continue
         if module.min_ram_gib > hardware.ram_gib:
             continue
         if module.workstation_only and not hardware.discrete_gpu:

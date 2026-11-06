@@ -7,6 +7,7 @@ UEFI requires OVMF CODE and a disposable copy of its matching VARS image.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import selectors
 from dataclasses import dataclass
@@ -29,6 +30,9 @@ class BootEvidence:
     jarvis: bool
     api: bool
     excerpt: str
+    payload_required: bool = False
+    payload: bool = False
+    inference: bool = False
 
 
 _KERNEL_RE = re.compile(r"(?:Linux version \d|Linux kernel|MJON_VM_PROOF KERNEL_RUNNING)")
@@ -38,7 +42,8 @@ _USERSPACE_RE = re.compile(r"(?:systemd\[1\]|Welcome to Debian|Reached target|St
 def analyze_serial_log(log: str) -> BootEvidence:
     """Boot menus and ISO signatures are never sufficient proof of kernel boot."""
     lines = log.splitlines()
-    excerpt = "\n".join([*lines[:20], "...", *lines[-70:]])
+    markers = [line for line in lines if "MJON_VM_PROOF " in line]
+    excerpt = "\n".join([*lines[:20], "...", *markers, "...", *lines[-400:]])
     return BootEvidence(
         bool(_KERNEL_RE.search(log)), bool(_USERSPACE_RE.search(log)),
         'MJON_VM_PROOF LIVE_USER_READY' in log,
@@ -46,12 +51,15 @@ def analyze_serial_log(log: str) -> BootEvidence:
         'MJON_VM_PROOF JARVIS_SERVICE_STABLE' in log,
         'MJON_VM_PROOF JARVIS_API_READY' in log,
         excerpt,
+        payload_required='MJON_VM_PROOF OLLAMA_PAYLOAD_REQUIRED' in log,
+        payload='MJON_VM_PROOF OLLAMA_PAYLOAD_READY' in log,
+        inference='MJON_VM_PROOF JARVIS_LOCAL_INFERENCE_READY' in log,
     )
 
 
 def qemu_command(
     iso: Path, *, firmware: Path | None, firmware_vars: Path | None = None,
-    memory_mib: int = 3072,
+    memory_mib: int = 4096,
 ) -> list[str]:
     if not iso.is_file():
         raise FileNotFoundError(iso)
@@ -127,19 +135,51 @@ def _collect_until_graphical_ready(process: subprocess.Popen, timeout_seconds: i
             if total_bytes > 10 * 1024 * 1024:
                 break
             observed = b"".join(chunks)
+            if b"MJON_VM_PROOF OLLAMA_DIAGNOSTICS_DONE" in observed:
+                break
             if (b"MJON_VM_PROOF KERNEL_RUNNING" in observed
                     and b"MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE" in observed
                     and b"MJON_VM_PROOF LIVE_USER_READY" in observed
                     and b"MJON_VM_PROOF PLASMA_DESKTOP_ACTIVE" in observed
                     and b"MJON_VM_PROOF JARVIS_SERVICE_STABLE" in observed
-                    and b"MJON_VM_PROOF JARVIS_API_READY" in observed):
+                    and b"MJON_VM_PROOF JARVIS_API_READY" in observed
+                    and (b"MJON_VM_PROOF OLLAMA_PAYLOAD_REQUIRED" not in observed
+                         or (b"MJON_VM_PROOF OLLAMA_PAYLOAD_READY" in observed
+                             and b"MJON_VM_PROOF JARVIS_LOCAL_INFERENCE_READY" in observed))):
                 break
     finally:
         selector.close()
     return b"".join(chunks).decode("utf-8", "replace")
 
 
-def boot_probe(iso: Path, *, firmware: Path | None, timeout_seconds: int = 300) -> BootEvidence:
+def _complete_png(path: Path) -> bool:
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return False
+    return data.startswith(b"\x89PNG\r\n\x1a\n") and data.endswith(b"\x00\x00\x00\x00IEND\xaeB\x60\x82")
+
+
+def _capture_screenshot(monitor: Path, destination: Path) -> None:
+    """Capture the actual guest framebuffer through QEMU's PNG encoder."""
+    if destination.exists():
+        raise FileExistsError(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+        sock.settimeout(5)
+        sock.connect(str(monitor))
+        command = "screendump " + json.dumps(str(destination.resolve())) + " -f png\n"
+        sock.sendall(command.encode())
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if _complete_png(destination):
+                return
+            time.sleep(.1)
+    raise RuntimeError("QEMU did not produce a complete guest PNG")
+
+
+def boot_probe(iso: Path, *, firmware: Path | None, timeout_seconds: int = 300,
+               screenshot: Path | None = None) -> BootEvidence:
     """Boot ISO in a disposable network-free, host-disk-free VM.
 
     QEMU remains running after Linux starts. We terminate it at the bound and
@@ -161,14 +201,21 @@ def boot_probe(iso: Path, *, firmware: Path | None, timeout_seconds: int = 300) 
             args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             text=False,
         )
+        capture_error = ""
         try:
             _send_boot_key(monitor)
             output = _collect_until_graphical_ready(process, timeout_seconds)
+            if screenshot is not None:
+                try:
+                    _capture_screenshot(monitor, screenshot)
+                except (OSError, RuntimeError) as exc:
+                    capture_error = "\nMJON_SCREENSHOT_FAILED " + str(exc) + "\n"
         finally:
             if process.poll() is None:
                 process.kill()
             stdout, stderr = process.communicate(timeout=20)
         output += stdout.decode("utf-8", "replace") + "\n" + stderr.decode("utf-8", "replace")
+        output += capture_error
         return analyze_serial_log(output)
 
 
@@ -178,15 +225,20 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--uefi-firmware", type=Path)
     parser.add_argument("--timeout", type=int, default=300)
     parser.add_argument("--log", type=Path, required=True)
+    parser.add_argument("--screenshot", type=Path, help="Capture the guest framebuffer as a new PNG")
     args = parser.parse_args(argv)
-    evidence = boot_probe(args.iso, firmware=args.uefi_firmware, timeout_seconds=args.timeout)
+    evidence = boot_probe(args.iso, firmware=args.uefi_firmware, timeout_seconds=args.timeout,
+                          screenshot=args.screenshot)
     args.log.write_text(
-        f"MJON_VM_EVIDENCE kernel={evidence.kernel} userspace={evidence.userspace} live_user={evidence.live_user} plasma={evidence.plasma} jarvis={evidence.jarvis} api={evidence.api}\n"
+        f"MJON_VM_EVIDENCE kernel={evidence.kernel} userspace={evidence.userspace} live_user={evidence.live_user} plasma={evidence.plasma} jarvis={evidence.jarvis} api={evidence.api} payload_required={evidence.payload_required} payload={evidence.payload} inference={evidence.inference}\n"
         + evidence.excerpt + "\n", encoding="utf-8",
     )
     label = "UEFI" if args.uefi_firmware is not None else "BIOS"
-    print(f"{label} boot evidence: kernel={evidence.kernel}, userspace={evidence.userspace}, live_user={evidence.live_user}, plasma={evidence.plasma}, jarvis={evidence.jarvis}, api={evidence.api}")
-    if not all((evidence.kernel, evidence.userspace, evidence.live_user, evidence.plasma, evidence.jarvis, evidence.api)):
+    print(f"{label} boot evidence: kernel={evidence.kernel}, userspace={evidence.userspace}, live_user={evidence.live_user}, plasma={evidence.plasma}, jarvis={evidence.jarvis}, api={evidence.api}, payload_required={evidence.payload_required}, payload={evidence.payload}, inference={evidence.inference}")
+    if (not all((evidence.kernel, evidence.userspace, evidence.live_user, evidence.plasma, evidence.jarvis, evidence.api))
+            or (evidence.payload_required and not (evidence.payload and evidence.inference))
+            or (args.screenshot is not None and (not _complete_png(args.screenshot)
+                                                or "MJON_SCREENSHOT_FAILED" in evidence.excerpt))):
         print(evidence.excerpt, file=sys.stderr)
         return 1
     return 0

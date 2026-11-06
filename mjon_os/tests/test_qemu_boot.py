@@ -45,6 +45,80 @@ class BootProbeTests(unittest.TestCase):
         self.assertTrue(evidence.kernel)
         self.assertFalse(evidence.userspace)
 
+    def test_failed_payload_does_not_hide_a_healthy_jarvis_api(self):
+        evidence = analyze_serial_log(
+            "MJON_VM_PROOF JARVIS_API_READY\n"
+            "MJON_VM_PROOF OLLAMA_PAYLOAD_REQUIRED\n"
+            "MJON_VM_PROOF OLLAMA_PAYLOAD_FAILED\n")
+        self.assertTrue(evidence.api)
+        self.assertTrue(evidence.payload_required)
+        self.assertFalse(evidence.payload)
+        self.assertFalse(evidence.inference)
+
+    @unittest.skipUnless(os.name == "posix", "subprocess pipes are POSIX-only")
+    def test_collector_waits_for_generation_after_model_discovery(self):
+        from mjon_os.qemu_boot import _collect_until_graphical_ready
+        markers = ("OLLAMA_PAYLOAD_REQUIRED", "KERNEL_RUNNING", "DISPLAY_MANAGER_ACTIVE",
+                   "LIVE_USER_READY", "PLASMA_DESKTOP_ACTIVE", "JARVIS_SERVICE_STABLE",
+                   "JARVIS_API_READY", "OLLAMA_PAYLOAD_READY")
+        script = "import time; " + "; ".join(
+            f"print('MJON_VM_PROOF {marker}', flush=True)" for marker in markers)
+        script += ("; time.sleep(.1); print('MJON_VM_PROOF JARVIS_LOCAL_INFERENCE_READY', "
+                   "flush=True); time.sleep(30)")
+        child = subprocess.Popen([sys.executable, "-c", script], stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
+        try:
+            output = _collect_until_graphical_ready(child, 5)
+            evidence = analyze_serial_log(output)
+            self.assertTrue(evidence.payload)
+            self.assertTrue(evidence.inference)
+        finally:
+            child.kill()
+            child.communicate(timeout=5)
+
+    @unittest.skipUnless(os.name == "posix", "subprocess pipes are POSIX-only")
+    def test_collector_waits_for_required_payload_and_keeps_failure_diagnostics(self):
+        from mjon_os.qemu_boot import _collect_until_graphical_ready
+        script = (
+            "import time; "
+            "print('MJON_VM_PROOF OLLAMA_PAYLOAD_REQUIRED', flush=True); "
+            "print('MJON_VM_PROOF KERNEL_RUNNING', flush=True); "
+            "print('MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE', flush=True); "
+            "print('MJON_VM_PROOF LIVE_USER_READY', flush=True); "
+            "print('MJON_VM_PROOF PLASMA_DESKTOP_ACTIVE', flush=True); "
+            "print('MJON_VM_PROOF JARVIS_SERVICE_STABLE', flush=True); "
+            "print('MJON_VM_PROOF JARVIS_API_READY', flush=True); "
+            "time.sleep(.1); print('permission denied diagnostic', flush=True); "
+            "print('MJON_VM_PROOF OLLAMA_DIAGNOSTICS_DONE', flush=True); time.sleep(30)"
+        )
+        child = subprocess.Popen([sys.executable, "-c", script], stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
+        try:
+            start = time.monotonic()
+            output = _collect_until_graphical_ready(child, 5)
+            self.assertIn("permission denied diagnostic", output)
+            self.assertLess(time.monotonic() - start, 3)
+        finally:
+            child.kill()
+            child.communicate(timeout=5)
+
+    def test_failed_capture_cannot_reuse_a_stale_png_as_new_graphical_proof(self):
+        import base64
+        from mjon_os.qemu_boot import BootEvidence, main
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            iso, screenshot, log = root / "image.iso", root / "stale.png", root / "boot.txt"
+            iso.write_bytes(b"fixture")
+            screenshot.write_bytes(base64.b64decode(
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="))
+            evidence = BootEvidence(True, True, True, True, True, True,
+                                    "MJON_SCREENSHOT_FAILED existing output")
+            with patch("mjon_os.qemu_boot.boot_probe", return_value=evidence):
+                result = main(["--iso", str(iso), "--log", str(log),
+                               "--screenshot", str(screenshot)])
+            self.assertEqual(result, 1)
+            self.assertIn("MJON_SCREENSHOT_FAILED", log.read_text())
+
     def test_qemu_never_mounts_host_disks_or_enables_network(self):
         with tempfile.TemporaryDirectory() as temporary:
             iso = Path(temporary) / "image.iso"
@@ -53,6 +127,7 @@ class BootProbeTests(unittest.TestCase):
             self.assertIn("-nic", cmd)
             self.assertEqual(cmd[cmd.index("-nic") + 1], "none")
             self.assertIn("-snapshot", cmd)
+            self.assertEqual(cmd[cmd.index("-m") + 1], "4096")
             self.assertIn("-cdrom", cmd)
             self.assertNotIn("-drive", cmd)
             self.assertNotIn("-hda", cmd)

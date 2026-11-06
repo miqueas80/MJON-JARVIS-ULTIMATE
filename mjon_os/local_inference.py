@@ -12,16 +12,11 @@ from .doctor import parse_memtotal
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, build_opener, ProxyHandler, HTTPRedirectHandler
 from typing import Callable, Any
+from .ollama_policy import eligible_models, is_cloud_model
 
 
 class InferenceUnavailable(RuntimeError):
     """The local inference service or requested model is not available."""
-
-
-def is_cloud_model(name: str) -> bool:
-    """Deny Ollama cloud model tags even through a loopback server."""
-    name = name.strip().casefold()
-    return name.endswith(":cloud") or name.endswith("-cloud")
 
 
 class _NoRedirect(HTTPRedirectHandler):
@@ -101,7 +96,9 @@ class OllamaClient:
                 size = item.get("size")
                 if not isinstance(size, int) or isinstance(size, bool) or size < 0:
                     size = None
-                if name and len(name) <= 200 and name not in [item[0] for item in names]:
+                if (name and len(name) <= 200 and not is_cloud_model(name)
+                        and not any(item.get(key) for key in ("remote", "remote_host", "remote_model"))
+                        and name not in [item[0] for item in names]):
                     names.append((name, size))
         return tuple(names)
 
@@ -122,9 +119,7 @@ class OllamaClient:
             raise InferenceUnavailable("El modelo solicitado no está descargado en Ollama.")
         # A GGUF/disk-size heuristic: 40% physical RAM budget leaves memory
         # for KDE, JARVIS, KV cache and OS overhead. It is not an OOM guarantee.
-        max_size = int(self._ram_bytes * 0.40) if self._ram_bytes else None
-        candidates = [name for name, size in available
-                      if max_size is None or size is None or size <= max_size]
+        candidates = eligible_models(available, self._ram_bytes)
         if model is not None:
             if model not in candidates:
                 raise InferenceUnavailable("Modelo rechazado por política conservadora de memoria RAM.")
@@ -139,10 +134,14 @@ class OllamaClient:
                 "model": chosen,
                 "messages": [{"role": "user", "content": prompt}],
                 "stream": False,
-                "options": {"num_predict": 256},
+                "think": False,
+                "options": {"num_predict": 256, "num_ctx": 2048, "num_thread": 4,
+                            "temperature": 0},
             },
             timeout=90,
         )
+        if response.get("done") is not True:
+            raise InferenceUnavailable("Ollama returned an incomplete generation response.")
         message = response.get("message")
         text = message.get("content") if isinstance(message, dict) else None
         if not isinstance(text, str) or not text.strip():

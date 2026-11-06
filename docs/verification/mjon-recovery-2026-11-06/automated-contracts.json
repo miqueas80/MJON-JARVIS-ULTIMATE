@@ -1,0 +1,35 @@
+{
+  "scope": "Automated contracts and safety regressions; no model generation or new VM result",
+  "tested_base": "42888a6774480c78e0bc71baa11db41f16a5118c",
+  "worktree_dirty": true,
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "files": {
+    ".github/workflows/mjon-live-iso.yml": "8bcc5ac0c8902d3f08eb028066f0bc8d6172b2eb4c3df0d0c47baa7a933517f3",
+    "docs/MJON_BOOT_RECOVERY_2026-11-06.md": "fc7989cdba7d44fd44454a48197a0579578894a89940076920aa4f56897d863b",
+    "docs/MJON_RECOVERY_RESULTS_2026-11-05.md": "cd339587059565726df70edb8f9ad18a3f2db1eb61177c796a9d2b40777d0e21",
+    "mjon_os/USB_LIVE_TEST.md": "b760d9615002a7964b5fa3bcebc226f0d1f17b695e1fe3a3701bb6c39eca1d27",
+    "mjon_os/USB_RELEASE_NOTES.md": "cd9c595bc246435701a62a60a606c96183eb85521babb0a078b8c455ed6ea556",
+    "mjon_os/first_boot.py": "9cb8d9a1b38a105acfcde5d06ceb7b11927778be581b0baffc8cdb009eb45af1",
+    "mjon_os/live/config/includes.chroot/usr/lib/systemd/user/mjon-ollama.service": "260e255e4f5ebaf1adca60a28100c9bfa8679b31566e216c3f5d7647472f1048",
+    "mjon_os/live/config/includes.chroot/usr/local/bin/mjon-control-center": "04705e81f52ebf561563f419adc09880a29eafbeb6a48adf890dbbe461936c25",
+    "mjon_os/live/config/includes.chroot/usr/local/bin/mjon-session": "f9ef7e1fa748bd9533fc1bc4713a3b8db75083e36b3d8288eb64070f87694beb",
+    "mjon_os/live/config/includes.chroot/usr/local/bin/mjon-vm-proof": "12e176be61b82c774f0eac480a85c7a0038fdc296ef2ac0536c5213ea9232dcd",
+    "mjon_os/offline_payload.py": "a5aac71e0f4a27e8dd01debd8686782642ac04436a83ad6d2814ffbf99eb9ba0",
+    "mjon_os/qemu_boot.py": "a7b8d3ca518124336eecb979125a56b7037f7031567d6c96f8cdec17f193d398",
+    "mjon_os/release_checks.py": "490da562b99cafa322ecd66e22c856d06185ae2ce9b9b6ec98cf9b7791902816",
+    "mjon_os/tests/test_first_boot.py": "e89b20241a63737db4cb324afb5ce84d04409525c797336d6a8701f56785c127",
+    "mjon_os/tests/test_offline_payload.py": "1ea48f2d6579f20955928e3928b39f7f98d8c64dd9fb9b647ba055dd085d2e58",
+    "mjon_os/tests/test_ollama_recovery.py": "95c051b814cfeb5ddcbaf6487a09856b77c671ff31ef607334622568f2023795",
+    "mjon_os/tests/test_qemu_boot.py": "a78972ab7c1b143cf6f279d91b2c581ba33b775c93cd35451e3266e9ea6a932e",
+    "mjon_os/tests/test_release_checks.py": "11f0a6c3c7d6db3eb4b397d6bb78c78bdcef44ecba08f49e12681da8802d9443"
+  },
+  "native_command": "/tmp/mjon-check-venv/bin/python -m unittest discover -s mjon_os/tests -p test_*.py",
+  "native_result": "140 passed, zero skipped with SDK dependencies installed",
+  "safety_command": "python -m pytest tests/unit/safety/test_tool_executor_unattended.py tests/unit/test_risk_tier.py tests/unit/safety/test_tool_executor_voice_confirm.py tests/unit/safety/test_approval_workflow.py -q --noconftest --override-ini addopts=",
+  "safety_result": "36 + 19 passed in two invocations; fixture tools only, no actual external side effects",
+  "minimal_result": "140 tests total; 128 executed and 12 explicitly skipped",
+  "source_serial_sha256_before_trimming_trailing_blank_lines": {
+    "0f7ab29-boot-bios-serial.txt": "6df1197e64063083164f3caa7207a997e19f4bed2bca3327dbf458d716a2fdf8",
+    "7e8da8d-boot-bios-serial.txt": "843646c36db17dbe0b540ac95022bed8e16a76d3ee4e549eedb9ecd5ee99f12f"
+  }
+}

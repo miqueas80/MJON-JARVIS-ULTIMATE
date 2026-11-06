@@ -1,0 +1,23 @@
+{
+  "kind": "real-root-owned-payload-regression",
+  "provider_uid": 1002,
+  "binary_sha256": "4a525117528467da41be4188ef8efbc3dbbca9da420fb25cd61cf49d104732fd",
+  "prebaked_alias": "qwen3-1.7b-jarvis-8d6b982f",
+  "red": {
+    "http_status": 500,
+    "body": {
+      "error": "chtimes /home/mjonprobe/mjon-red-models/blobs/sha256-3d0b790534fe4b79525fc3692950408dca41171676ed7e21db57af5c65ef6ab6: operation not permitted"
+    },
+    "provider_uid": 1002,
+    "payload_blob_uid": 0,
+    "interfaces": [
+      "lo"
+    ]
+  },
+  "green_exit_code": 1,
+  "green_passed": false,
+  "private_regular_blob_bytes": 0,
+  "weights_stay_linked": true,
+  "scope": "Disposable native CI fixture, not a VM or physical hardware test",
+  "passed": false
+}

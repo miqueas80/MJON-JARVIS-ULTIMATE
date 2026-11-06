@@ -1,0 +1,186 @@
+/tmp/mjon-runtime/venv/lib/python3.12/site-packages/pytest_asyncio/plugin.py:300: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the "fixture" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+........................................................................ [ 41%]
+...............................................................FFFF..... [ 82%]
+..................FFF..F.F....                                           [100%]
+=================================== FAILURES ===================================
+____________ test_local_tail_closes_the_chain_after_keyed_families _____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fc9e435bb00>
+
+    def test_local_tail_closes_the_chain_after_keyed_families(monkeypatch) -> None:
+        _keys(monkeypatch, "gemini", "openrouter")
+        config = JarvisConfig(brain=BrainConfig(primary="gemini"))
+    
+        chain = resolver._resolve_chain(config)
+        providers = [p for p, _ in chain]
+    
+        assert providers[0] == "gemini"
+        # Keyed family the user actually holds comes before any local provider.
+>       assert providers.index("openrouter") < providers.index("ollama")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       ValueError: 'openrouter' is not in list
+
+tests/unit/brain/test_resolver_local_tail.py:47: ValueError
+_________ test_local_provider_as_primary_is_not_duplicated_by_the_tail _________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fc9e43981a0>
+
+    def test_local_provider_as_primary_is_not_duplicated_by_the_tail(monkeypatch) -> None:
+        config = JarvisConfig(brain=BrainConfig(primary="ollama"))
+    
+        chain = resolver._resolve_chain(config)
+        providers = [p for p, _ in chain]
+    
+        assert providers.count("ollama") == 1
+        assert providers[0] == "ollama"
+>       assert "local-openai" in providers
+E       AssertionError: assert 'local-openai' in ['ollama']
+
+tests/unit/brain/test_resolver_local_tail.py:60: AssertionError
+_______________ test_zero_key_install_still_resolves_onto_local ________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fc9e4398620>
+
+    def test_zero_key_install_still_resolves_onto_local(monkeypatch) -> None:
+        """The AP-22 acceptance shape: no key anywhere → the chain still ends on
+        reachable local providers instead of only a dead keyless claude-api."""
+        config = JarvisConfig()
+    
+        chain = resolver._resolve_chain(config)
+        providers = [p for p, _ in chain]
+    
+>       assert "ollama" in providers
+E       AssertionError: assert 'ollama' in ['claude-api']
+
+tests/unit/brain/test_resolver_local_tail.py:71: AssertionError
+___________________ test_local_tail_honors_user_picked_model ___________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fc9e4398d10>
+
+    def test_local_tail_honors_user_picked_model(monkeypatch) -> None:
+        """The user's [brain.providers.ollama].model pick rides into the tail —
+        never overridden by a hardcoded default (AP-21)."""
+        config = JarvisConfig(
+            brain=BrainConfig(
+                primary="gemini",
+                providers={"ollama": BrainProviderConfig(model="qwen3.5:9b")},
+            )
+        )
+        _keys(monkeypatch, "gemini")
+    
+        chain = resolver._resolve_chain(config)
+        by_provider = dict(chain)
+    
+>       assert by_provider["ollama"] == "qwen3.5:9b"
+               ^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'ollama'
+
+tests/unit/brain/test_resolver_local_tail.py:89: KeyError
+__ test_voice_key_leaves_the_turn_chain_while_another_provider_remains[fast] ___
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fc9e43c0590>
+level = 'fast'
+
+    @pytest.mark.parametrize("level", ["fast", "deep"])
+    def test_voice_key_leaves_the_turn_chain_while_another_provider_remains(
+        monkeypatch: pytest.MonkeyPatch, level: str
+    ) -> None:
+        manager = _manager(monkeypatch, active="grok", available=["grok", "openrouter", "openai"])
+    
+        chain = manager._build_fallback_chain(level)
+    
+>       assert "openai" not in _providers(chain)
+E       AssertionError: assert 'openai' not in {'grok', 'openai', 'openrouter'}
+E        +  where {'grok', 'openai', 'openrouter'} = _providers([('grok', 'grok-4.3'), ('openrouter', 'nvidia/nemotron-3-ultra-550b-a55b:free'), ('openai', 'gpt-5.5')])
+
+tests/unit/brain/test_manager_voice_key_chain.py:53: AssertionError
+__ test_voice_key_leaves_the_turn_chain_while_another_provider_remains[deep] ___
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fc9e43c0ce0>
+level = 'deep'
+
+    @pytest.mark.parametrize("level", ["fast", "deep"])
+    def test_voice_key_leaves_the_turn_chain_while_another_provider_remains(
+        monkeypatch: pytest.MonkeyPatch, level: str
+    ) -> None:
+        manager = _manager(monkeypatch, active="grok", available=["grok", "openrouter", "openai"])
+    
+        chain = manager._build_fallback_chain(level)
+    
+>       assert "openai" not in _providers(chain)
+E       AssertionError: assert 'openai' not in {'grok', 'openai', 'openrouter'}
+E        +  where {'grok', 'openai', 'openrouter'} = _providers([('grok', 'grok-4.3'), ('openrouter', 'nvidia/nemotron-3-ultra-550b-a55b:free'), ('openai', 'gpt-5.5-pro')])
+
+tests/unit/brain/test_manager_voice_key_chain.py:53: AssertionError
+___________ test_voice_key_primary_hands_the_turn_to_another_family ____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fc9e43c1790>
+
+    def test_voice_key_primary_hands_the_turn_to_another_family(
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        manager = _manager(monkeypatch, active="openai", available=["grok", "openai"])
+    
+        chain = manager._build_fallback_chain("deep")
+    
+>       assert _providers(chain) == {"grok"}
+E       AssertionError: assert {'grok', 'openai'} == {'grok'}
+E         
+E         Extra items in the left set:
+E         'openai'
+E         Use -v to get more diff
+
+tests/unit/brain/test_manager_voice_key_chain.py:64: AssertionError
+______________ test_tool_lead_prefers_a_family_off_the_voice_key _______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fc9e43c3d10>
+
+    def test_tool_lead_prefers_a_family_off_the_voice_key(monkeypatch: pytest.MonkeyPatch) -> None:
+        manager = _manager(monkeypatch, active="codex", available=["codex", "openai", "grok"])
+        monkeypatch.setattr(manager, "_brain_can_call_tools", lambda name, model: True)
+    
+>       assert manager._first_tool_capable_provider("fast")[0] == "grok"
+E       AssertionError: assert 'openai' == 'grok'
+E         
+E         - grok
+E         + openai
+
+tests/unit/brain/test_manager_voice_key_chain.py:91: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  dodaios.brain.manager:manager.py:2526 Brain provider 'codex' is subagent-only; using 'gemini' as main brain.
+_______________ test_scheduled_routine_chain_skips_the_voice_key _______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fc9e43c15b0>
+
+    def test_scheduled_routine_chain_skips_the_voice_key(monkeypatch: pytest.MonkeyPatch) -> None:
+        manager = _manager(monkeypatch, active="grok", available=["grok", "openai"])
+        monkeypatch.setattr(
+            manager,
+            "_hoist_tool_model",
+            lambda chain: [("openai", "gpt-5.5"), ("grok", "grok-4.3")],
+        )
+    
+        chain = manager._task_provider_chain("deep")
+    
+>       assert _providers(chain) == {"grok"}
+E       AssertionError: assert {'grok', 'openai'} == {'grok'}
+E         
+E         Extra items in the left set:
+E         'openai'
+E         Use -v to get more diff
+
+tests/unit/brain/test_manager_voice_key_chain.py:113: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/brain/test_resolver_local_tail.py::test_local_tail_closes_the_chain_after_keyed_families
+FAILED tests/unit/brain/test_resolver_local_tail.py::test_local_provider_as_primary_is_not_duplicated_by_the_tail
+FAILED tests/unit/brain/test_resolver_local_tail.py::test_zero_key_install_still_resolves_onto_local
+FAILED tests/unit/brain/test_resolver_local_tail.py::test_local_tail_honors_user_picked_model
+FAILED tests/unit/brain/test_manager_voice_key_chain.py::test_voice_key_leaves_the_turn_chain_while_another_provider_remains[fast]
+FAILED tests/unit/brain/test_manager_voice_key_chain.py::test_voice_key_leaves_the_turn_chain_while_another_provider_remains[deep]
+FAILED tests/unit/brain/test_manager_voice_key_chain.py::test_voice_key_primary_hands_the_turn_to_another_family
+FAILED tests/unit/brain/test_manager_voice_key_chain.py::test_tool_lead_prefers_a_family_off_the_voice_key
+FAILED tests/unit/brain/test_manager_voice_key_chain.py::test_scheduled_routine_chain_skips_the_voice_key
+9 failed, 165 passed in 4.20s

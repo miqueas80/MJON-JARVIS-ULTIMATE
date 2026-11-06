@@ -1,0 +1,14 @@
+{
+  "product": "MJON AI OS",
+  "base": "Debian 13 (trixie)",
+  "desktop": "KDE Plasma",
+  "arch": "amd64",
+  "engine": "Dodaios (MJON fork)",
+  "engine_version": "4.1.2",
+  "wheel": "dodaios-4.1.2-py3-none-any.whl",
+  "wheel_sha256": "43a88efdb97ea7f606b09939f4418dc65e25623baace7ac90f896a7bd29c5995",
+  "status": "build candidate: not release-tested",
+  "offline_model": "qwen3:1.7b",
+  "ollama_version": "0.40.14",
+  "offline_payload_sha256": "38a8cc51df0bb089d5e48a8ef006f54735552238814e6a2f40314e0e7a5a1472"
+}

@@ -30,7 +30,9 @@ from collections.abc import Mapping
 # A single native MJON AI OS build rebrands its visible surfaces at boot.
 # Persistent Dodaios identifiers and credentials remain untouched for
 # compatibility; this flag is only set by the OS-owned desktop launcher.
-PRODUCT_NAME = "MJON AI OS" if os.environ.get("MJON_NATIVE_OS") == "1" else "Dodaios"
+PRODUCT_NAME = "Dodaios"
+if os.environ.get("MJON_NATIVE_OS") == "1":
+    PRODUCT_NAME = "MJON AI OS"
 
 # --- Persistent identity anchors ---------------------------------------------
 # Compatibility contracts, not branding: these spell the names existing

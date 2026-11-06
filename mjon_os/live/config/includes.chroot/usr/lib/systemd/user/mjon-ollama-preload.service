@@ -1,7 +1,10 @@
 [Unit]
 Description=MJON AI OS - opt-in local Ollama model warmup
 Documentation=https://github.com/miqueas80/MJON-JARVIS-ULTIMATE
-After=graphical-session.target
+After=graphical-session.target mjon-ollama.service
+# The optional unit is activated only by explicit user opt-in. The bundled
+# daemon's own payload condition preserves the unbundled/system-daemon case.
+Wants=mjon-ollama.service
 ConditionPathExists=%h/.config/mjon-ai-os/ollama-preload.json
 
 [Service]

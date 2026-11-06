@@ -1,4 +1,6 @@
 # Experimental ISO builder. Runs only when this workflow changes or is explicitly dispatched.
+# Recovery also requires actual configured-brain generation inside the Live VM.
+# Explicit warmup is ordered after the independently verified bundled daemon.
 # Unified AI fabric v1: opt-in module catalog, local-only Ollama adapter,
 # GTK Control Center (with KDE fallback), conservative zram/AppArmor baseline,
 # and explicit ISO-chroot import checks. NO optional engines auto-installed.
@@ -16,7 +18,7 @@ name: MJON AI OS - experimental USB ISO
 
 on:
   push:
-    branches: [feature/mjon-ai-os-native]
+    branches: [feature/mjon-ai-os-native, recovery/mjon-ai-os-stability-20261105]
     paths:
       - '.github/workflows/mjon-live-iso.yml'
   workflow_dispatch:
@@ -63,6 +65,7 @@ jobs:
       - name: Run image and first-boot contracts
         run: |
           python -m unittest discover -s mjon_os/tests -p 'test_*.py' -v
+          sh -n mjon_os/live/config/includes.chroot/usr/local/bin/mjon-session
           sh -n mjon_os/live/config/includes.chroot/usr/local/bin/mjon-vm-proof
           sh -n mjon_os/live/config/includes.chroot/usr/local/bin/mjon-control-center
       - name: Verify offline provider and stream-readiness contracts
@@ -82,6 +85,91 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check 'setuptools>=84.1.0' wheel build
           python -m build --wheel --no-isolation -o "$RUNNER_TEMP/wheels"
+      - name: Prepare explicitly bundled CPU runtime and reviewed local model
+        if: github.ref_name == 'recovery/mjon-ai-os-stability-20261105'
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/ollama-cpu"
+          curl -fL --retry 3 --max-time 600 -o "$RUNNER_TEMP/ollama.tar.zst" \
+            https://github.com/ollama/ollama/releases/download/v0.40.14/ollama-linux-amd64.tar.zst
+          echo "993e83d08c3d13d17c55009a3e2664c8a25445e644aec3a68bef5abb6abce67d  $RUNNER_TEMP/ollama.tar.zst" | sha256sum -c -
+          tar --zstd -xf "$RUNNER_TEMP/ollama.tar.zst" -C "$RUNNER_TEMP/ollama-cpu" \
+            --exclude='lib/ollama/cuda*' --exclude='lib/ollama/mlx*'
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/ollama-cpu/LICENSE" \
+            https://raw.githubusercontent.com/ollama/ollama/v0.40.14/LICENSE
+          python -m pip install openai==3.46.0 httpx pydantic-settings structlog loguru keyring psutil pyyaml tomlkit aiosqlite
+          python -m unittest discover -s mjon_os/tests -p 'test_*.py' -v > "$RUNNER_TEMP/native-provider-contracts.txt" 2>&1
+          tail -5 "$RUNNER_TEMP/native-provider-contracts.txt"
+          python - <<'PY'
+          import json, os, subprocess, time, urllib.request
+          from pathlib import Path
+          from mjon_os.offline_payload import create_payload
+          from mjon_os.first_boot import provision_user_config
+          from mjon_os.jarvis_probe import verify_jarvis_ollama
+          import tempfile
+          base = Path(os.environ['RUNNER_TEMP'])
+          runtime = base / 'ollama-cpu'
+          env = {**os.environ, 'OLLAMA_HOST':'127.0.0.1:11434',
+                 'OLLAMA_MODELS':str(base/'ollama-models'), 'OLLAMA_NO_CLOUD':'1',
+                 'OLLAMA_NUM_PARALLEL':'1', 'OLLAMA_MAX_LOADED_MODELS':'1',
+                 'OLLAMA_VULKAN':'0', 'CUDA_VISIBLE_DEVICES':'-1'}
+          with (base/'ollama-prepare.log').open('w') as log:
+              server = subprocess.Popen([str(runtime/'bin/ollama'), 'serve'], env=env, stdout=log, stderr=log)
+              try:
+                  opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+                  for attempt in range(60):
+                      try:
+                          opener.open('http://127.0.0.1:11434/api/version', timeout=2).close()
+                          break
+                      except OSError:
+                          time.sleep(.5)
+                  subprocess.run([str(runtime/'bin/ollama'), 'pull', 'qwen3:1.7b'], env=env, check=True, timeout=600)
+                  with opener.open('http://127.0.0.1:11434/api/tags') as response:
+                      rows = json.load(response)['models']
+                  assert any(row['name']=='qwen3:1.7b' and row['digest']=='8f68893c685c3ddff2aa3fffce2aa60a30bb2da65ca488b61fff134a4d1730e7' for row in rows), 'Model manifest changed; review before rebuilding'
+                  # Ollama profile creation touches referenced blob timestamps.
+                  # Prepare the real default profile while staging is writable.
+                  with tempfile.TemporaryDirectory(prefix='mjon-profile-', dir=base) as tmp:
+                      private = Path(tmp)
+                      config = private/'dodaios.toml'
+                      provision_user_config(Path('dodaios.toml.example').resolve(), config, private/'data')
+                      status = verify_jarvis_ollama(config)
+                      if not status.ready:
+                          raise RuntimeError('Default profile preparation failed: ' + status.detail)
+              finally:
+                  server.terminate()
+                  server.wait(timeout=20)
+          create_payload(runtime, base/'ollama-models', base/'offline-payload', model='qwen3:1.7b',
+                         runtime_version='0.40.14', archive_sha256='993e83d08c3d13d17c55009a3e2664c8a25445e644aec3a68bef5abb6abce67d')
+          PY
+      - name: Test the real bundled provider as an unprivileged user without external networking
+        if: github.ref_name == 'recovery/mjon-ai-os-stability-20261105'
+        env:
+          MJON_CI_TMP: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          # Only public tracked source and the reviewed payload enter this fixture.
+          mkdir -p /tmp/mjon-real-provider
+          git clone --quiet --no-hardlinks --local "$GITHUB_WORKSPACE" /tmp/mjon-real-provider/source
+          cp -a "$MJON_CI_TMP/offline-payload" /tmp/mjon-real-provider/payload
+          sudo chown -R root:root /tmp/mjon-real-provider/payload
+          sudo useradd --create-home --shell /usr/sbin/nologin mjonaccept
+          runtime_python="$(command -v python)"
+          cd /tmp/mjon-real-provider/source
+          sudo runuser -u mjonaccept -- "$runtime_python" -m mjon_os.offline_payload \
+            --payload /tmp/mjon-real-provider/payload \
+            --initialize-store /home/mjonaccept/mjon-models
+          sudo unshare --net -- /bin/sh -c \
+            'set -eu; ip link set dev lo up; exec runuser -u mjonaccept -- "$@"' sh \
+            env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory \
+            GIT_CONFIG_VALUE_0=/tmp/mjon-real-provider/source \
+            "$runtime_python" scripts/mjon_offline_acceptance.py --worker \
+            --ollama /tmp/mjon-real-provider/payload/runtime/bin/ollama \
+            --models /home/mjonaccept/mjon-models --model qwen3:1.7b \
+            --payload /tmp/mjon-real-provider/payload --require-foreign-owned-payload \
+            --output /home/mjonaccept/offline-provider-evidence.json
+          sudo cp /home/mjonaccept/offline-provider-evidence.json "$MJON_CI_TMP/offline-provider-evidence.json"
+          sudo chmod 0644 "$MJON_CI_TMP/offline-provider-evidence.json"
       - name: Create native live-build tree
         env:
           MJON_CI_TMP: ${{ runner.temp }}
@@ -94,7 +182,9 @@ jobs:
           wheels=list((root/'wheels').glob('dodaios-*.whl'))
           if len(wheels)!=1:
               raise SystemExit(f'Expected one local fork wheel: {wheels}')
-          result=prepare_image(repo_root=Path.cwd(), wheel=wheels[0], destination=root/'mjon-live')
+          payload=root/'offline-payload'
+          result=prepare_image(repo_root=Path.cwd(), wheel=wheels[0], destination=root/'mjon-live',
+                               offline_payload=payload if payload.is_dir() else None)
           print(result)
           PY
       - name: Assemble Debian ISO in disposable privileged builder
@@ -138,6 +228,25 @@ jobs:
           mv "$iso.sha256" "$MJON_CI_TMP/mjon-live/MJON-AI-OS-dev-amd64.iso.sha256"
           # Update checksum to use the final filename, not its previous staging name.
           ( cd "$MJON_CI_TMP/mjon-live" && sha256sum MJON-AI-OS-dev-amd64.iso > MJON-AI-OS-dev-amd64.iso.sha256 )
+      - name: Keep verification records beside their image
+        env:
+          MJON_CI_TMP: ${{ runner.temp }}
+        run: |
+          if [ -f "$MJON_CI_TMP/offline-provider-evidence.json" ]; then
+            cp "$MJON_CI_TMP/offline-provider-evidence.json" "$MJON_CI_TMP/mjon-live/offline-provider-evidence.json"
+          fi
+      - name: Retain quarantined image for reproducible boot diagnostics
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: mjon-ai-os-UNVERIFIED-image-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/mjon-live/MJON-AI-OS-dev-amd64.iso
+            ${{ runner.temp }}/mjon-live/MJON-AI-OS-dev-amd64.iso.sha256
+            ${{ runner.temp }}/mjon-live/mjon-build.json
+            ${{ runner.temp }}/mjon-live/offline-provider-evidence.json
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
       - name: Boot the ISO in isolated BIOS and UEFI virtual machines
         env:
           MJON_CI_TMP: ${{ runner.temp }}
@@ -146,11 +255,13 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends qemu-system-x86 ovmf
           iso="$MJON_CI_TMP/mjon-live/MJON-AI-OS-dev-amd64.iso"
-          python -m mjon_os.qemu_boot --iso "$iso" --timeout 420 \
-            --log "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
+          python -m mjon_os.qemu_boot --iso "$iso" --timeout 1200 \
+            --log "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt" \
+            --screenshot "$MJON_CI_TMP/mjon-live/boot-bios.png"
           python -m mjon_os.qemu_boot --iso "$iso" \
-            --uefi-firmware /usr/share/OVMF/OVMF_CODE_4M.fd --timeout 420 \
-            --log "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
+            --uefi-firmware /usr/share/OVMF/OVMF_CODE_4M.fd --timeout 1200 \
+            --log "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt" \
+            --screenshot "$MJON_CI_TMP/mjon-live/boot-uefi.png"
           # Hardware exposed a broken Live login: the greeter alone is not enough.
           # The replacement guest proof must exercise user/live PAM authentication.
           grep -Fq 'MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
@@ -168,6 +279,12 @@ jobs:
           grep -Fq 'MJON_VM_PROOF JARVIS_SERVICE_STABLE' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
           grep -Fq 'MJON_VM_PROOF JARVIS_API_READY' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
           grep -Fq 'MJON_VM_PROOF JARVIS_API_READY' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
+          if [ -d "$MJON_CI_TMP/offline-payload" ]; then
+            grep -Fq 'MJON_VM_PROOF OLLAMA_PAYLOAD_READY' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
+            grep -Fq 'MJON_VM_PROOF OLLAMA_PAYLOAD_READY' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
+            grep -Fq 'MJON_VM_PROOF JARVIS_LOCAL_INFERENCE_READY' "$MJON_CI_TMP/mjon-live/boot-bios-serial.txt"
+            grep -Fq 'MJON_VM_PROOF JARVIS_LOCAL_INFERENCE_READY' "$MJON_CI_TMP/mjon-live/boot-uefi-serial.txt"
+          fi
       - name: Upload experimental ISO for virtual-machine testing (not release)
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -180,6 +297,9 @@ jobs:
             ${{ runner.temp }}/mjon-live/boot-records.txt
             ${{ runner.temp }}/mjon-live/boot-bios-serial.txt
             ${{ runner.temp }}/mjon-live/boot-uefi-serial.txt
+            ${{ runner.temp }}/mjon-live/boot-bios.png
+            ${{ runner.temp }}/mjon-live/boot-uefi.png
+            ${{ runner.temp }}/mjon-live/offline-provider-evidence.json
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
@@ -189,10 +309,14 @@ jobs:
         with:
           name: mjon-ai-os-iso-build-diagnostics-${{ github.run_id }}
           path: |
+            ${{ runner.temp }}/offline-provider-evidence.json
+            ${{ runner.temp }}/native-provider-contracts.txt
             ${{ runner.temp }}/mjon-live/mjon-build.log
             ${{ runner.temp }}/mjon-live/mjon-build.json
             ${{ runner.temp }}/mjon-live/boot-bios-serial.txt
             ${{ runner.temp }}/mjon-live/boot-uefi-serial.txt
+            ${{ runner.temp }}/mjon-live/boot-bios.png
+            ${{ runner.temp }}/mjon-live/boot-uefi.png
           if-no-files-found: ignore
           retention-days: 7
 
@@ -215,7 +339,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Download the fully verified ISO from the preceding job
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: mjon-ai-os-developer-iso-${{ github.sha }}
           path: ${{ runner.temp }}/verified-iso

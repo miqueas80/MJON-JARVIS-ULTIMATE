@@ -114,3 +114,9 @@ Its serial excerpt and metadata are retained under the verification directory.
 Artifact 13501880979 is a 3,462,715,018-byte quarantined ZIP, not a verified ISO.
 Its size also means an eventual single-file GitHub Release may exceed the
 existing 2 GiB gate; that gate is not relaxed and no release is authorized.
+
+The explicitly enabled preload unit is ordered after, and requests, the bundled
+daemon. Its payload condition preserves the unbundled/system-daemon case.
+This avoids exhausting the preload's short HTTP retry window while a cold
+bundled payload is still being verified. The service remains opt-in, never
+pulls weights, and does not mark a warmed model as generation-verified.

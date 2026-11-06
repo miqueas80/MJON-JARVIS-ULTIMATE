@@ -1,5 +1,6 @@
 # Experimental ISO builder. Runs only when this workflow changes or is explicitly dispatched.
 # Recovery also requires actual configured-brain generation inside the Live VM.
+# Explicit warmup is ordered after the independently verified bundled daemon.
 # Unified AI fabric v1: opt-in module catalog, local-only Ollama adapter,
 # GTK Control Center (with KDE fallback), conservative zram/AppArmor baseline,
 # and explicit ISO-chroot import checks. NO optional engines auto-installed.

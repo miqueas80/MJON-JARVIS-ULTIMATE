@@ -79,7 +79,7 @@ class ProviderHealthTests(unittest.TestCase):
                           verify_generation=True)
         self.assertFalse(status.ready)
 
-    def test_optional_boot_service_never_forces_server_or_model_download(self):
+    def test_optional_boot_service_does_not_download_or_spawn_an_unmanaged_server(self):
         root = Path(__file__).resolve().parents[1]
         unit = (root / "live/config/includes.chroot/usr/lib/systemd/user/"
                 "mjon-ollama-preload.service").read_text(encoding="utf-8")

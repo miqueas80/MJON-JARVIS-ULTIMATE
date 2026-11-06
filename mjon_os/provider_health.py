@@ -109,8 +109,9 @@ def preload_from_config(
 ) -> ProviderStatus:
     """Opt-in startup waits a bounded time for an already-managed local server.
 
-    The user service never starts Ollama or downloads any model. Waiting for
-    loopback readiness handles races with a separate system-level daemon.
+    This function never starts Ollama or downloads models. The optional OS
+    unit orders a bundled daemon dependency; without a payload, readiness
+    retries handle a separately managed system-level daemon.
     """
     if not config_file.exists():
         return ProviderStatus("disabled", detail="No hay configuración de precarga.")

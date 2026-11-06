@@ -54,3 +54,64 @@ jobs:
               print("\nMJON_COMPRESSION_LOG_EXCERPT", flush=True)
               print("\n".join(lines[-35:]), flush=True)
           PY
+
+  ownership:
+    name: Reproduce root-owned payload as an unprivileged provider
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout the recovery experiment
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          lfs: false
+          persist-credentials: false
+      - name: Download the exact quarantined image for read-only extraction
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: '42217951377'
+          name: mjon-ai-os-UNVERIFIED-image-8f156309daaf00263025569e7632e81a513e577e
+          path: ${{ runner.temp }}/mjon-owner-image
+      - name: Extract the reviewed payload without booting or installing the image
+        env:
+          MJON_OWNER_TMP: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends xorriso squashfs-tools
+          cd "$MJON_OWNER_TMP/mjon-owner-image"
+          sha256sum -c MJON-AI-OS-dev-amd64.iso.sha256
+          xorriso -osirrox on -indev MJON-AI-OS-dev-amd64.iso \
+            -extract /live/filesystem.squashfs "$MJON_OWNER_TMP/mjon-owner.squashfs" > "$MJON_OWNER_TMP/mjon-owner-extract.log" 2>&1
+          rm MJON-AI-OS-dev-amd64.iso
+          unsquashfs -no-progress -d "$MJON_OWNER_TMP/mjon-owner-root" \
+            "$MJON_OWNER_TMP/mjon-owner.squashfs" opt/mjon-ai-os/ollama
+          rm "$MJON_OWNER_TMP/mjon-owner.squashfs"
+          sudo chown -R root:root "$MJON_OWNER_TMP/mjon-owner-root/opt/mjon-ai-os/ollama"
+          sudo useradd --create-home --shell /usr/sbin/nologin mjonprobe
+          python3 -m venv "$MJON_OWNER_TMP/mjon-owner-venv"
+          "$MJON_OWNER_TMP/mjon-owner-venv/bin/python" -m pip install --disable-pip-version-check \
+            openai==3.46.0 httpx pydantic-settings structlog loguru keyring psutil pyyaml tomlkit aiosqlite \
+            > "$MJON_OWNER_TMP/mjon-owner-pip.log" 2>&1
+          cd "$GITHUB_WORKSPACE"
+          "$MJON_OWNER_TMP/mjon-owner-venv/bin/python" -m pip install --no-deps -e . \
+            >> "$MJON_OWNER_TMP/mjon-owner-pip.log" 2>&1
+      - name: Exercise ownership failure and a prebaked profile without external networking
+        env:
+          MJON_OWNER_TMP: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$MJON_OWNER_TMP/mjon-owner-results"
+          sudo unshare --net -- "$MJON_OWNER_TMP/mjon-owner-venv/bin/python" \
+            scripts/mjon_root_owned_acceptance.py \
+            --payload "$MJON_OWNER_TMP/mjon-owner-root/opt/mjon-ai-os/ollama" \
+            --output-dir "$MJON_OWNER_TMP/mjon-owner-results" --probe-user mjonprobe
+      - name: Retain actual ownership experiment records
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: mjon-ownership-proof-${{ github.sha }}
+          path: ${{ runner.temp }}/mjon-owner-results
+          if-no-files-found: ignore
+          retention-days: 7

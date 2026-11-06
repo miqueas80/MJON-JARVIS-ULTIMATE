@@ -80,7 +80,10 @@ jobs:
           set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends xorriso squashfs-tools
-          cd "$MJON_OWNER_TMP/mjon-owner-image"
+          shopt -s globstar nullglob
+          images=( "$MJON_OWNER_TMP"/mjon-owner-image/**/MJON-AI-OS-dev-amd64.iso )
+          test "${#images[@]}" -eq 1
+          cd "${images[0]%/*}"
           sha256sum -c MJON-AI-OS-dev-amd64.iso.sha256
           xorriso -osirrox on -indev MJON-AI-OS-dev-amd64.iso \
             -extract /live/filesystem.squashfs "$MJON_OWNER_TMP/mjon-owner.squashfs" > "$MJON_OWNER_TMP/mjon-owner-extract.log" 2>&1

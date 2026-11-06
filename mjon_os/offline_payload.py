@@ -127,6 +127,9 @@ def initialize_model_store(payload: Path, store: Path) -> bool:
     store.mkdir(mode=0o700)
     try:
         shutil.copytree(payload / "models/manifests", store / "manifests")
+        versioned = payload / "models/manifests-v2"
+        if versioned.is_dir():
+            shutil.copytree(versioned, store / "manifests-v2")
         # Ollama creates small parameter/config blobs for derived profiles.
         # Link each immutable blob individually, keeping the directory itself
         # writable so those new blobs never alter the image payload.

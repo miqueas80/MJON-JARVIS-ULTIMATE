@@ -130,20 +130,26 @@ def main():
     record_path = Path(user.pw_dir) / "mjon-real-provider.json"
     command = as_user([sys.executable, str(ROOT / "scripts/mjon_offline_acceptance.py"),
                        "--worker", "--ollama", str(binary), "--models", str(second_store),
-                       "--payload", str(args.payload), "--model", model, "--output", str(record_path)])
+                       "--payload", str(args.payload), "--require-foreign-owned-payload",
+                       "--model", model, "--output", str(record_path)])
     tested = subprocess.run(command, cwd=ROOT, env=base_env, check=False, timeout=600)
     green = json.loads(record_path.read_text()) if record_path.exists() else {"passed": False}
     (args.output_dir / "green-real-provider.json").write_text(json.dumps(green, indent=2) + "\n")
     regular_weight_bytes = sum(path.stat().st_size for path in (second_store / "blobs").iterdir()
                                if not path.is_symlink())
+    weight_names = [path.name for path in blobs.iterdir() if path.stat().st_size >= 1024**2]
+    linked_weights = bool(weight_names) and all(
+        (second_store / "blobs" / name).is_symlink()
+        and (second_store / "blobs" / name).resolve() == (blobs / name).resolve()
+        for name in weight_names)
     result = {"kind": "real-root-owned-payload-regression", "provider_uid": user.pw_uid,
               "binary_sha256": binary_hash, "prebaked_alias": alias, "red": red,
               "green_exit_code": tested.returncode, "green_passed": green.get("passed") is True,
-              "private_regular_blob_bytes": regular_weight_bytes, "weights_stay_linked": True,
+              "private_regular_blob_bytes": regular_weight_bytes, "weights_stay_linked": linked_weights,
               "scope": "Disposable native CI fixture, not a VM or physical hardware test"}
     result["passed"] = (status >= 400 and "chtimes" in str(body).lower()
                         and tested.returncode == 0 and green.get("passed") is True
-                        and regular_weight_bytes < 1024**2)
+                        and regular_weight_bytes < 1024**2 and linked_weights)
     (args.output_dir / "ownership-summary.json").write_text(json.dumps(result, indent=2) + "\n")
     print("MJON_OWNERSHIP_SUMMARY " + json.dumps(result), flush=True)
     return 0 if result["passed"] else 1

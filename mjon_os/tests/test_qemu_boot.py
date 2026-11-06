@@ -102,6 +102,23 @@ class BootProbeTests(unittest.TestCase):
             child.kill()
             child.communicate(timeout=5)
 
+    def test_failed_capture_cannot_reuse_a_stale_png_as_new_graphical_proof(self):
+        import base64
+        from mjon_os.qemu_boot import BootEvidence, main
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            iso, screenshot, log = root / "image.iso", root / "stale.png", root / "boot.txt"
+            iso.write_bytes(b"fixture")
+            screenshot.write_bytes(base64.b64decode(
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="))
+            evidence = BootEvidence(True, True, True, True, True, True,
+                                    "MJON_SCREENSHOT_FAILED existing output")
+            with patch("mjon_os.qemu_boot.boot_probe", return_value=evidence):
+                result = main(["--iso", str(iso), "--log", str(log),
+                               "--screenshot", str(screenshot)])
+            self.assertEqual(result, 1)
+            self.assertIn("MJON_SCREENSHOT_FAILED", log.read_text())
+
     def test_qemu_never_mounts_host_disks_or_enables_network(self):
         with tempfile.TemporaryDirectory() as temporary:
             iso = Path(temporary) / "image.iso"

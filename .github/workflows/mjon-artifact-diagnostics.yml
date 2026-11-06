@@ -39,15 +39,17 @@ jobs:
         run: |
           set -euo pipefail
           python - <<'PY'
-          import json, os, re
+          import base64, json, os, re
           from pathlib import Path
           root = Path(os.environ["MJON_DIAGNOSTIC_ROOT"])
           allowed = {"boot-bios-serial.txt", "boot-uefi-serial.txt",
-                     "mjon-build.json", "offline-provider-evidence.json"}
+                     "mjon-build.json", "offline-provider-evidence.json", "native-provider-contracts.txt"}
           for path in sorted(root.rglob("*")):
               if path.is_file() and path.name in allowed:
                   print("\nMJON_DIAGNOSTIC_FILE " + path.name, flush=True)
                   print(path.read_text(errors="replace")[-60000:], flush=True)
+          for path in sorted(root.rglob("boot-*.png")):
+              print("MJON_SCREENSHOT " + path.name + " " + base64.b64encode(path.read_bytes()).decode(), flush=True)
           for path in root.rglob("mjon-build.log"):
               lines = [line for line in path.read_text(errors="replace").splitlines()
                        if re.search("squashfs|mksquashfs|compression", line, re.I)]

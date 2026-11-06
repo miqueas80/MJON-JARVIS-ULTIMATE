@@ -76,6 +76,21 @@ class OfflinePayloadTests(unittest.TestCase):
         (store / "blobs/new-profile-config").write_text("new private config blob")
         validate_payload(self.payload)
 
+    def test_versioned_manifests_are_copied_to_a_private_writable_store(self):
+        versioned = self.models / "manifests-v2/ollama.com/library/tiny/test"
+        versioned.parent.mkdir(parents=True)
+        versioned.write_text("versioned fixture metadata")
+        payload = self.root / "versioned-payload"
+        create_payload(self.runtime, self.models, payload, model="tiny:test",
+                       runtime_version="test-fixture", archive_sha256="0"*64)
+        store = self.root / "versioned-store"
+        initialize_model_store(payload, store)
+        copied = store / "manifests-v2/ollama.com/library/tiny/test"
+        self.assertFalse(copied.is_symlink())
+        self.assertEqual(copied.read_text(), "versioned fixture metadata")
+        copied.write_text("private user metadata")
+        validate_payload(payload)
+
     def test_foreign_user_store_is_preserved(self):
         store = self.root / "user-store"
         store.mkdir()

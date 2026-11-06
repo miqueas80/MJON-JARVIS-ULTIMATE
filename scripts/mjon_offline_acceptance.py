@@ -41,7 +41,8 @@ def worker(args) -> dict:
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         request = struct.pack("16sH14s", b"lo", 0, b"")
         flags = struct.unpack("16sH14s", fcntl.ioctl(sock, 0x8913, request))[1]
-        fcntl.ioctl(sock, 0x8914, struct.pack("16sH14s", b"lo", flags | 1, b""))
+        if not flags & 1:
+            fcntl.ioctl(sock, 0x8914, struct.pack("16sH14s", b"lo", flags | 1, b""))
     interfaces = sorted(line.split(":", 1)[0].strip()
                         for line in Path("/proc/net/dev").read_text().splitlines()
                         if ":" in line)
@@ -64,11 +65,25 @@ def worker(args) -> dict:
     from mjon_os.ollama_policy import physical_memory
     from mjon_os.offline_payload import validate_payload
     import psutil
+    payload_ownership = None
+    require_foreign = getattr(args, "require_foreign_owned_payload", False)
     if args.payload:
         validate_payload(args.payload)
+        blobs = list((args.payload / "models/blobs").iterdir())
+        payload_ownership = {
+            "probe_euid": os.geteuid(),
+            "blob_owner_uids": sorted({blob.stat().st_uid for blob in blobs}),
+            "all_blobs_foreign_owned": bool(blobs) and all(blob.stat().st_uid != os.geteuid() for blob in blobs),
+            "any_blob_writable_by_probe": any(os.access(blob, os.W_OK) for blob in blobs),
+            "required": require_foreign,
+        }
+        if require_foreign and (not payload_ownership["all_blobs_foreign_owned"]
+                                or payload_ownership["any_blob_writable_by_probe"]):
+            raise RuntimeError("Image acceptance requires immutable blobs owned by another UID")
 
     evidence = {"kind": "real-model-network-isolated-provider-test",
                 "desktop_or_physical_hardware_test": False,
+                "payload_ownership": payload_ownership,
                 "interfaces": interfaces, "external_connect_failure": blocked,
                 "physical_ram_bytes": physical_memory(), "model": args.model,
                 "binary_sha256": digest(args.ollama), "checks": {}}
@@ -208,6 +223,11 @@ def worker(args) -> dict:
     if args.payload:
         validate_payload(args.payload)
         checks["immutable_payload_unchanged"] = True
+    if require_foreign:
+        private_blob_bytes = sum(path.stat().st_size for path in (args.models / "blobs").iterdir()
+                                 if path.is_file() and not path.is_symlink())
+        evidence["private_regular_blob_bytes"] = private_blob_bytes
+        checks["no_weight_copy_into_private_model_store"] = private_blob_bytes < 1024**2
     evidence["infrastructure_passed"] = bool(checks) and all(checks.values())
     evidence["passed"] = evidence["infrastructure_passed"] and all(evidence.get("quality_checks", {}).values())
     return evidence
@@ -220,17 +240,23 @@ def main() -> int:
     parser.add_argument("--model", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--payload", type=Path, help="Also verify immutable image payload before and after inference")
+    parser.add_argument("--require-foreign-owned-payload", action="store_true",
+                        help="Require image blobs to be immutable and owned by another UID")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
     args.ollama, args.models, args.output = args.ollama.resolve(), args.models.resolve(), args.output.resolve()
     if not args.ollama.is_file() or not args.models.is_dir() or args.output.exists():
         parser.error("Supply existing runtime/weights and a new output path")
+    if args.require_foreign_owned_payload and not args.payload:
+        parser.error("--require-foreign-owned-payload requires --payload")
     if not args.worker:
         command = ["unshare", "-Urn", sys.executable, str(Path(__file__).resolve()),
                                "--worker", "--ollama", str(args.ollama), "--models", str(args.models),
                                "--model", args.model, "--output", str(args.output)]
         if args.payload:
             command.extend(["--payload", str(args.payload.resolve())])
+        if args.require_foreign_owned_payload:
+            command.append("--require-foreign-owned-payload")
         return subprocess.run(command, timeout=600).returncode
     result = worker(args)
     args.output.parent.mkdir(parents=True, exist_ok=True)

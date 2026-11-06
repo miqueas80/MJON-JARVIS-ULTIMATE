@@ -880,8 +880,10 @@ class OllamaBrain:
                         # The runtime already budgets against this window.
                         # Sending to the base model would silently serve a
                         # smaller context.
+                        hint = (" Bundled immutable weights require a matching staged profile; "
+                                "customized options need a writable model store.") if native_mode() else ""
                         raise RuntimeError(
-                            "Could not prepare the selected local model context."
+                            "Could not prepare the selected local model context." + hint
                         ) from exc
                     _PROFILE_REFUSED[refused_key] = time.monotonic()
                     log.warning(

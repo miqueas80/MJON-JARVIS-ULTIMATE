@@ -42,14 +42,17 @@ payload_failure() {
   # artifact showed only a payload marker, hiding the failure.
   {
     printf '\nMJON Ollama user-service diagnostics\n'
-    runuser -u user -- env XDG_RUNTIME_DIR="/run/user/$uid" \
-      DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" \
-      systemctl --user show mjon-ollama.service \
-      -p ActiveState -p SubState -p Result -p ExecMainCode \
-      -p ExecMainStatus -p ExecStartPre -p ExecStart -p TimeoutStartUSec
-    # Process entries and user-manager unit entries have different fields.
-    journalctl -b --no-pager -n 80 _SYSTEMD_USER_UNIT=mjon-ollama.service \
-      + "_UID=$uid" USER_UNIT=mjon-ollama.service
+    for unit in mjon-ollama.service mjon-jarvis.service; do
+      printf '\nMJON unit: %s\n' "$unit"
+      runuser -u user -- env XDG_RUNTIME_DIR="/run/user/$uid" \
+        DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" \
+        systemctl --user show "$unit" \
+        -p ActiveState -p SubState -p Result -p MainPID -p ExecMainCode \
+        -p ExecMainStatus -p ExecStartPre -p ExecStart -p TimeoutStartUSec
+      # Process entries and user-manager unit entries have different fields.
+      journalctl -b --no-pager -n 80 "_SYSTEMD_USER_UNIT=$unit" \
+        + "_UID=$uid" "USER_UNIT=$unit"
+    done
     stat -c '%a %U:%G %n' /opt/mjon-ai-os/ollama \
       /opt/mjon-ai-os/ollama/manifest.json \
       /opt/mjon-ai-os/ollama/runtime/bin/ollama
@@ -93,6 +96,11 @@ fi
 
 # The OS-owned JARVIS process must remain alive after KDE has started.
 # Query only the logged-in user's user service; do not grant root to JARVIS.
+jarvis_main_pid() {
+  runuser -u user -- env XDG_RUNTIME_DIR="/run/user/$uid" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" \
+    systemctl --user show mjon-jarvis.service -p MainPID --value
+}
 service_active() {
   [ -S "/run/user/$uid/bus" ] || return 1
   runuser -u user -- env \
@@ -106,6 +114,7 @@ while [ "$i" -lt 120 ]; do
   if service_active; then
     sleep 5
     if service_active; then
+      initial_jarvis_pid="$(jarvis_main_pid)"
       emit JARVIS_SERVICE_STABLE
       # A running Python process alone is not an operational assistant.
       # The native desktop must also respond on its loopback health endpoint.
@@ -125,7 +134,13 @@ while [ "$i" -lt 120 ]; do
                   JARVIS_DATA_DIR=/home/user/.local/share/mjon-ai-os \
                   timeout 110 /opt/mjon-ai-os/venv/bin/python -m mjon_os.jarvis_probe \
                   --config /home/user/.config/mjon-ai-os/dodaios.toml > /dev/ttyS0 2>&1; then
-                emit JARVIS_LOCAL_INFERENCE_READY
+                if service_active && [ "$(jarvis_main_pid)" = "$initial_jarvis_pid" ] && \
+                    curl -fsS --noproxy '*' --max-time 3 http://127.0.0.1:47821/api/health >/dev/null; then
+                  emit JARVIS_LOCAL_INFERENCE_READY
+                else
+                  emit JARVIS_SESSION_CHANGED_DURING_INFERENCE
+                  payload_failure
+                fi
               else
                 emit JARVIS_LOCAL_INFERENCE_FAILED
                 payload_failure

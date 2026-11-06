@@ -8,6 +8,9 @@ export MJON_AI_OS_CONFIG_ROOT="$config_home"
 export JARVIS_DATA_DIR="$data_home"
 export JARVIS_INSTANCE=default
 export MJON_NATIVE_OS=1
+# KDE makes pywebview prefer Qt; use the already validated Debian GTK/WebKit
+# backend instead of importing the observed incompatible Qt wheel path.
+export PYWEBVIEW_GUI=gtk
 # Applies to any explicitly spawned daemon; an existing system daemon needs
 # its own cloud-disabled configuration and offline acceptance.
 export OLLAMA_NO_CLOUD=1

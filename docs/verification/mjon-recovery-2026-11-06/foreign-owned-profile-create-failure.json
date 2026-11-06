@@ -1,0 +1,15 @@
+{
+  "http_status": 500,
+  "body": {
+    "error": "chtimes /home/mjonprobe/mjon-red-models/blobs/sha256-3d0b790534fe4b79525fc3692950408dca41171676ed7e21db57af5c65ef6ab6: operation not permitted"
+  },
+  "provider_uid": 1002,
+  "payload_blob_uid": 0,
+  "interfaces": [
+    "lo"
+  ],
+  "source_run": 42226964724,
+  "source_commit": "5b56c6c9498ed6a835b55cfcbfb477dacca2a748",
+  "image_source_commit": "8f156309daaf00263025569e7632e81a513e577e",
+  "note": "Real HTTP failure reproduced. The proposed green phase did not run provider acceptance: its unprivileged worker attempted to reconfigure an already-up loopback and hit EPERM. Not counted as a successful fix."
+}

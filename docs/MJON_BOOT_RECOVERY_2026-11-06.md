@@ -120,3 +120,67 @@ daemon. Its payload condition preserves the unbundled/system-daemon case.
 This avoids exhausting the preload's short HTTP retry window while a cold
 bundled payload is still being verified. The service remains opt-in, never
 pulls weights, and does not mark a warmed model as generation-verified.
+
+## Confirmed immutable-weight profile failure
+
+[Image run 42217951377](https://github.com/miqueas80/MJON-JARVIS-ULTIMATE/actions/runs/42217951377),
+source `8f156309daaf00263025569e7632e81a513e577e`, completed integrity/model-store
+initialization from 13:03:40 to 13:09:51 UTC (371 seconds under TCG), then
+successfully started the daemon and discovered the model. The larger startup
+allowance and independent readiness wait therefore worked. BIOS still failed
+actual configured-brain generation: `/api/create` returned HTTP 500.
+UEFI was not attempted and no verified artifact/release was produced.
+
+The exact original payload was extracted without booting or installing it.
+[Ownership run 42226964724](https://github.com/miqueas80/MJON-JARVIS-ULTIMATE/actions/runs/42226964724)
+reproduced HTTP 500 as UID 1002 against root-owned blobs:
+`chtimes .../sha256-3d0b790534fe4b79525fc3692950408dca41171676ed7e21db57af5c65ef6ab6: operation not permitted`.
+Ollama v0.40.14's `manifest.NewLayerFromLayer` calls `touchLayer`, which calls
+`os.Chtimes` on the referenced weight. Readability and a writable private
+directory are insufficient when the weight itself belongs to another user or
+resides in squashfs. Root CI bypassed this ownership boundary. A read-only
+file owned by the testing user also did not reproduce foreign ownership.
+
+The proposed correction prepares the actual bounded default JARVIS profile
+before staging the immutable payload, copies both legacy and versioned
+manifests into the private store, and then enforces real acceptance as a
+different unprivileged UID. The acceptance refuses writable/caller-owned
+payload blobs and rejects gigabyte copies into the private store. Default
+profile reuse avoids timestamp writes to image weights. Customized profile
+options still need a matching staged profile or a writable user-owned model
+store; they are not silently downgraded.
+
+The first ownership helper failed on the older artifact's nested directory
+layout; the second failed before running the model because the test user
+could not traverse the runner's private home. Public fixtures were moved to
+`/tmp` instead of opening that home. The next run reproduced the real HTTP
+failure, but its proposed green phase stopped at the test worker's attempt to
+reconfigure an already-up loopback without CAP_NET_ADMIN. That is a test-setup
+failure, not a successful repair or a model regression. The worker now sets
+loopback flags only when needed; the controlling namespace brings it up before
+dropping privileges. The corrected green result still requires execution.
+
+## Graphical failure and additional evidence
+
+The same BIOS serial record contains an invalid-opcode trap in
+`libshiboken6.abi3.so.6.12`. An HTTP API alone did not establish a surviving
+desktop window. Pywebview's Linux selection prefers Qt when KDE_FULL_SESSION
+is set. The native session now explicitly selects the already packaged and
+build-checked GTK/WebKit backend; upstream non-native selection is unchanged.
+
+The next VM test also checks that JARVIS's main service PID and API survive
+the whole model test and captures the actual guest framebuffer as a new PNG
+through QEMU's monitor. Failed or stale screenshot capture cannot satisfy
+verification. This enables visual review; screenshots alone still do not
+prove user interaction, voice, tools or persistence. The screenshots are
+temporary CI records, not a final release or a physical-hardware test.
+
+The verified image artifact's provider JSON is now staged beside the ISO.
+Keeping one artifact root prevents the extra JSON path from nesting the ISO
+under mjon-live and breaking the release consumer's expected file layout.
+The existing 2 GiB single-file release limit remains unchanged.
+
+Raw 8f15630 provider, serial and build records plus the ownership failure are
+preserved in the verification directory. The ownership experiment is based on
+the real artifact and model, not synthetic weights. Corrected CI/VM outcomes
+must be appended before claiming the new image works.

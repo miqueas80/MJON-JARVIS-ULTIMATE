@@ -1,0 +1,56 @@
+name: MJON recovery artifact diagnostics
+
+on:
+  push:
+    branches: [recovery/mjon-ai-os-stability-20261105]
+    paths: ['.github/workflows/mjon-artifact-diagnostics.yml']
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Same-repository source workflow run ID
+        required: true
+        type: string
+      artifact_name:
+        description: Exact diagnostic artifact name
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  inspect:
+    name: Read existing diagnostic records without executing artifact contents
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Download the exact source diagnostics
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.run_id || '42217951377' }}
+          name: ${{ inputs.artifact_name || 'mjon-ai-os-iso-build-diagnostics-42217951377' }}
+          path: ${{ runner.temp }}/mjon-source-diagnostics
+      - name: Print bounded existing verification records
+        env:
+          MJON_DIAGNOSTIC_ROOT: ${{ runner.temp }}/mjon-source-diagnostics
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          root = Path(os.environ["MJON_DIAGNOSTIC_ROOT"])
+          allowed = {"boot-bios-serial.txt", "boot-uefi-serial.txt",
+                     "mjon-build.json", "offline-provider-evidence.json"}
+          for path in sorted(root.rglob("*")):
+              if path.is_file() and path.name in allowed:
+                  print("\nMJON_DIAGNOSTIC_FILE " + path.name, flush=True)
+                  print(path.read_text(errors="replace")[-60000:], flush=True)
+          for path in root.rglob("mjon-build.log"):
+              lines = [line for line in path.read_text(errors="replace").splitlines()
+                       if re.search("squashfs|mksquashfs|compression", line, re.I)]
+              print("\nMJON_COMPRESSION_LOG_EXCERPT", flush=True)
+              print("\n".join(lines[-35:]), flush=True)
+          PY

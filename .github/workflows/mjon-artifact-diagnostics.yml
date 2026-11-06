@@ -88,33 +88,35 @@ jobs:
           xorriso -osirrox on -indev MJON-AI-OS-dev-amd64.iso \
             -extract /live/filesystem.squashfs "$MJON_OWNER_TMP/mjon-owner.squashfs" > "$MJON_OWNER_TMP/mjon-owner-extract.log" 2>&1
           rm MJON-AI-OS-dev-amd64.iso
-          unsquashfs -no-progress -d "$MJON_OWNER_TMP/mjon-owner-root" \
+          mkdir -p /tmp/mjon-ownership/source
+          cp -a "$GITHUB_WORKSPACE/." /tmp/mjon-ownership/source/
+          unsquashfs -no-progress -d /tmp/mjon-ownership/root \
             "$MJON_OWNER_TMP/mjon-owner.squashfs" opt/mjon-ai-os/ollama
           rm "$MJON_OWNER_TMP/mjon-owner.squashfs"
-          sudo chown -R root:root "$MJON_OWNER_TMP/mjon-owner-root/opt/mjon-ai-os/ollama"
+          sudo chown -R root:root /tmp/mjon-ownership/root/opt/mjon-ai-os/ollama
           sudo useradd --create-home --shell /usr/sbin/nologin mjonprobe
-          python3 -m venv "$MJON_OWNER_TMP/mjon-owner-venv"
-          "$MJON_OWNER_TMP/mjon-owner-venv/bin/python" -m pip install --disable-pip-version-check \
+          python3 -m venv /tmp/mjon-ownership/venv
+          /tmp/mjon-ownership/venv/bin/python -m pip install --disable-pip-version-check \
             openai==3.46.0 httpx pydantic-settings structlog loguru keyring psutil pyyaml tomlkit aiosqlite \
             > "$MJON_OWNER_TMP/mjon-owner-pip.log" 2>&1
-          cd "$GITHUB_WORKSPACE"
-          "$MJON_OWNER_TMP/mjon-owner-venv/bin/python" -m pip install --no-deps -e . \
+          cd /tmp/mjon-ownership/source
+          /tmp/mjon-ownership/venv/bin/python -m pip install --no-deps -e . \
             >> "$MJON_OWNER_TMP/mjon-owner-pip.log" 2>&1
       - name: Exercise ownership failure and a prebaked profile without external networking
         env:
           MJON_OWNER_TMP: ${{ runner.temp }}
         run: |
           set -euo pipefail
-          mkdir -p "$MJON_OWNER_TMP/mjon-owner-results"
-          sudo unshare --net -- "$MJON_OWNER_TMP/mjon-owner-venv/bin/python" \
-            scripts/mjon_root_owned_acceptance.py \
-            --payload "$MJON_OWNER_TMP/mjon-owner-root/opt/mjon-ai-os/ollama" \
-            --output-dir "$MJON_OWNER_TMP/mjon-owner-results" --probe-user mjonprobe
+          mkdir -p /tmp/mjon-ownership/results
+          sudo unshare --net -- /tmp/mjon-ownership/venv/bin/python \
+            /tmp/mjon-ownership/source/scripts/mjon_root_owned_acceptance.py \
+            --payload /tmp/mjon-ownership/root/opt/mjon-ai-os/ollama \
+            --output-dir /tmp/mjon-ownership/results --probe-user mjonprobe
       - name: Retain actual ownership experiment records
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: mjon-ownership-proof-${{ github.sha }}
-          path: ${{ runner.temp }}/mjon-owner-results
+          path: /tmp/mjon-ownership/results
           if-no-files-found: ignore
           retention-days: 7

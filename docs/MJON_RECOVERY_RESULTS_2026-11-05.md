@@ -51,7 +51,7 @@ with no changes to main and no final ISO publication.
 | Recovery regressions copied onto untouched `b61e9175` | See `regressions-before.txt` | 15 failed, 1 passed on the prior source; never interpreted as passing tests |
 | `compileall`, `sh -n` for native launch/VM scripts, workflow YAML parsing, `git diff --check` | passed | Syntax and formatting only |
 
-Logs are in [evidence/mjon-recovery-2026-11-05](evidence/mjon-recovery-2026-11-05).
+Logs are in [verification/mjon-recovery-2026-11-05](verification/mjon-recovery-2026-11-05).
 Expanded resolver tests need the fork installed (`pip install --no-deps -e .`)
 so its provider entry points exist. The first source-only run had nine failures
 in those metadata-dependent tests; after installation the same expanded set

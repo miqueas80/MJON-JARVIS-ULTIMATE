@@ -3,6 +3,9 @@
 set -eu
 [ -c /dev/ttyS0 ] || exit 0
 emit() { printf 'MJON_VM_PROOF %s\n' "$1" > /dev/ttyS0; }
+if [ -f /opt/mjon-ai-os/ollama/manifest.json ]; then
+  emit OLLAMA_PAYLOAD_REQUIRED
+fi
 emit KERNEL_RUNNING
 if systemctl is-active --quiet display-manager.service; then
   emit DISPLAY_MANAGER_ACTIVE
@@ -74,6 +77,7 @@ while [ "$i" -lt 120 ]; do
       while [ "$j" -lt 80 ]; do
         if curl -fsS --noproxy '*' --max-time 2 \
             http://127.0.0.1:47821/api/health >/dev/null 2>&1; then
+          emit JARVIS_API_READY
           if [ -f /opt/mjon-ai-os/ollama/manifest.json ]; then
             # This proves packaged runtime and model discovery, not inference.
             if curl -fsS --noproxy '*' --max-time 5 \
@@ -82,10 +86,26 @@ while [ "$i" -lt 120 ]; do
               emit OLLAMA_PAYLOAD_READY
             else
               emit OLLAMA_PAYLOAD_FAILED
+              # Keep the actual failed user-service evidence. The earlier
+              # artifact showed only a payload marker, hiding the failure.
+              {
+                printf '\nMJON Ollama user-service diagnostics\n'
+                runuser -u user -- env XDG_RUNTIME_DIR="/run/user/$uid" \
+                  DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" \
+                  systemctl --user show mjon-ollama.service \
+                  -p ActiveState -p SubState -p Result -p ExecMainCode \
+                  -p ExecMainStatus -p ExecStartPre -p ExecStart -p TimeoutStartUSec
+                journalctl -b --no-pager -n 80 "_UID=$uid" \
+                  _SYSTEMD_USER_UNIT=mjon-ollama.service
+                stat -c '%a %U:%G %n' /opt/mjon-ai-os/ollama \
+                  /opt/mjon-ai-os/ollama/manifest.json \
+                  /opt/mjon-ai-os/ollama/runtime/bin/ollama
+                grep -E 'MemTotal:|MemAvailable:' /proc/meminfo
+              } > /dev/ttyS0 2>&1 || true
+              emit OLLAMA_DIAGNOSTICS_DONE
               exit 1
             fi
           fi
-          emit JARVIS_API_READY
           exit 0
         fi
         j=$((j+1))

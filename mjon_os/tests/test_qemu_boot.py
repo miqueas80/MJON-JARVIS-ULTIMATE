@@ -45,6 +45,41 @@ class BootProbeTests(unittest.TestCase):
         self.assertTrue(evidence.kernel)
         self.assertFalse(evidence.userspace)
 
+    def test_failed_payload_does_not_hide_a_healthy_jarvis_api(self):
+        evidence = analyze_serial_log(
+            "MJON_VM_PROOF JARVIS_API_READY\n"
+            "MJON_VM_PROOF OLLAMA_PAYLOAD_REQUIRED\n"
+            "MJON_VM_PROOF OLLAMA_PAYLOAD_FAILED\n")
+        self.assertTrue(evidence.api)
+        self.assertTrue(evidence.payload_required)
+        self.assertFalse(evidence.payload)
+
+    @unittest.skipUnless(os.name == "posix", "subprocess pipes are POSIX-only")
+    def test_collector_waits_for_required_payload_and_keeps_failure_diagnostics(self):
+        from mjon_os.qemu_boot import _collect_until_graphical_ready
+        script = (
+            "import time; "
+            "print('MJON_VM_PROOF OLLAMA_PAYLOAD_REQUIRED', flush=True); "
+            "print('MJON_VM_PROOF KERNEL_RUNNING', flush=True); "
+            "print('MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE', flush=True); "
+            "print('MJON_VM_PROOF LIVE_USER_READY', flush=True); "
+            "print('MJON_VM_PROOF PLASMA_DESKTOP_ACTIVE', flush=True); "
+            "print('MJON_VM_PROOF JARVIS_SERVICE_STABLE', flush=True); "
+            "print('MJON_VM_PROOF JARVIS_API_READY', flush=True); "
+            "time.sleep(.1); print('permission denied diagnostic', flush=True); "
+            "print('MJON_VM_PROOF OLLAMA_DIAGNOSTICS_DONE', flush=True); time.sleep(30)"
+        )
+        child = subprocess.Popen([sys.executable, "-c", script], stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
+        try:
+            start = time.monotonic()
+            output = _collect_until_graphical_ready(child, 5)
+            self.assertIn("permission denied diagnostic", output)
+            self.assertLess(time.monotonic() - start, 3)
+        finally:
+            child.kill()
+            child.communicate(timeout=5)
+
     def test_qemu_never_mounts_host_disks_or_enables_network(self):
         with tempfile.TemporaryDirectory() as temporary:
             iso = Path(temporary) / "image.iso"

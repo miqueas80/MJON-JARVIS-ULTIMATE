@@ -29,6 +29,8 @@ class BootEvidence:
     jarvis: bool
     api: bool
     excerpt: str
+    payload_required: bool = False
+    payload: bool = False
 
 
 _KERNEL_RE = re.compile(r"(?:Linux version \d|Linux kernel|MJON_VM_PROOF KERNEL_RUNNING)")
@@ -38,7 +40,8 @@ _USERSPACE_RE = re.compile(r"(?:systemd\[1\]|Welcome to Debian|Reached target|St
 def analyze_serial_log(log: str) -> BootEvidence:
     """Boot menus and ISO signatures are never sufficient proof of kernel boot."""
     lines = log.splitlines()
-    excerpt = "\n".join([*lines[:20], "...", *lines[-70:]])
+    markers = [line for line in lines if "MJON_VM_PROOF " in line]
+    excerpt = "\n".join([*lines[:20], "...", *markers, "...", *lines[-120:]])
     return BootEvidence(
         bool(_KERNEL_RE.search(log)), bool(_USERSPACE_RE.search(log)),
         'MJON_VM_PROOF LIVE_USER_READY' in log,
@@ -46,6 +49,8 @@ def analyze_serial_log(log: str) -> BootEvidence:
         'MJON_VM_PROOF JARVIS_SERVICE_STABLE' in log,
         'MJON_VM_PROOF JARVIS_API_READY' in log,
         excerpt,
+        payload_required='MJON_VM_PROOF OLLAMA_PAYLOAD_REQUIRED' in log,
+        payload='MJON_VM_PROOF OLLAMA_PAYLOAD_READY' in log,
     )
 
 
@@ -127,12 +132,16 @@ def _collect_until_graphical_ready(process: subprocess.Popen, timeout_seconds: i
             if total_bytes > 10 * 1024 * 1024:
                 break
             observed = b"".join(chunks)
+            if b"MJON_VM_PROOF OLLAMA_DIAGNOSTICS_DONE" in observed:
+                break
             if (b"MJON_VM_PROOF KERNEL_RUNNING" in observed
                     and b"MJON_VM_PROOF DISPLAY_MANAGER_ACTIVE" in observed
                     and b"MJON_VM_PROOF LIVE_USER_READY" in observed
                     and b"MJON_VM_PROOF PLASMA_DESKTOP_ACTIVE" in observed
                     and b"MJON_VM_PROOF JARVIS_SERVICE_STABLE" in observed
-                    and b"MJON_VM_PROOF JARVIS_API_READY" in observed):
+                    and b"MJON_VM_PROOF JARVIS_API_READY" in observed
+                    and (b"MJON_VM_PROOF OLLAMA_PAYLOAD_REQUIRED" not in observed
+                         or b"MJON_VM_PROOF OLLAMA_PAYLOAD_READY" in observed)):
                 break
     finally:
         selector.close()
@@ -181,12 +190,13 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     evidence = boot_probe(args.iso, firmware=args.uefi_firmware, timeout_seconds=args.timeout)
     args.log.write_text(
-        f"MJON_VM_EVIDENCE kernel={evidence.kernel} userspace={evidence.userspace} live_user={evidence.live_user} plasma={evidence.plasma} jarvis={evidence.jarvis} api={evidence.api}\n"
+        f"MJON_VM_EVIDENCE kernel={evidence.kernel} userspace={evidence.userspace} live_user={evidence.live_user} plasma={evidence.plasma} jarvis={evidence.jarvis} api={evidence.api} payload_required={evidence.payload_required} payload={evidence.payload}\n"
         + evidence.excerpt + "\n", encoding="utf-8",
     )
     label = "UEFI" if args.uefi_firmware is not None else "BIOS"
-    print(f"{label} boot evidence: kernel={evidence.kernel}, userspace={evidence.userspace}, live_user={evidence.live_user}, plasma={evidence.plasma}, jarvis={evidence.jarvis}, api={evidence.api}")
-    if not all((evidence.kernel, evidence.userspace, evidence.live_user, evidence.plasma, evidence.jarvis, evidence.api)):
+    print(f"{label} boot evidence: kernel={evidence.kernel}, userspace={evidence.userspace}, live_user={evidence.live_user}, plasma={evidence.plasma}, jarvis={evidence.jarvis}, api={evidence.api}, payload_required={evidence.payload_required}, payload={evidence.payload}")
+    if (not all((evidence.kernel, evidence.userspace, evidence.live_user, evidence.plasma, evidence.jarvis, evidence.api))
+            or (evidence.payload_required and not evidence.payload)):
         print(evidence.excerpt, file=sys.stderr)
         return 1
     return 0

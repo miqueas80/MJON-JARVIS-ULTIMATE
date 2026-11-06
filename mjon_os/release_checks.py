@@ -39,6 +39,9 @@ def check_candidate(iso: Path, checksum: Path, boot_records: Path,
 
     for label, logpath in (("BIOS", bios_log), ("UEFI", uefi_log)):
         log = logpath.read_text(encoding="utf-8")
+        if ("MJON_VM_PROOF OLLAMA_PAYLOAD_REQUIRED" in log
+                and "MJON_VM_PROOF OLLAMA_PAYLOAD_READY" not in log):
+            raise ValueError(f"Missing {label} VM bundled Ollama readiness proof")
         if "MJON_VM_EVIDENCE kernel=True userspace=True" not in log:
             raise ValueError(f"Missing {label} VM kernel/userspace proof")
         if ("MJON_VM_EVIDENCE kernel=True userspace=True live_user=True" not in log
